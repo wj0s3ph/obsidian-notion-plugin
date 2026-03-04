@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DatabaseSyncSetting } from "./settings";
+import type { SyncFileResult } from "./sync/sync-service";
 
 const addCommand = vi.fn();
 const addRibbonIcon = vi.fn();
@@ -146,17 +147,22 @@ class TestPlugin extends NotionSyncPlugin {
 		propertyMappings: [],
 		titleProperty: "Name",
 	};
+	chooseDatabaseMock = vi.fn(async (_databases: DatabaseSyncSetting[]) => this.selection);
+	syncResult: SyncFileResult = {
+		status: "success",
+		summary: {
+			createdLocalDocuments: 0,
+			createdRemotePages: 1,
+			skipped: 0,
+			updatedLocalDocuments: 0,
+			updatedRemotePages: 0,
+		},
+	};
 
-	syncFile = vi.fn(async () => ({
-		createdLocalDocuments: 0,
-		createdRemotePages: 1,
-		skipped: 0,
-		updatedLocalDocuments: 0,
-		updatedRemotePages: 0,
-	}));
+	syncFile = vi.fn(async () => this.syncResult);
 
 	protected override async chooseDatabase(_databases: DatabaseSyncSetting[]) {
-		return this.selection;
+		return this.chooseDatabaseMock(_databases);
 	}
 
 	protected override createSyncService() {
@@ -199,8 +205,10 @@ describe("NotionSyncPlugin", () => {
 
 		ribbons[0]?.callback();
 		await Promise.resolve();
+		await Promise.resolve();
 
 		expect(plugin.syncFile).toHaveBeenCalledWith("Tasks/launch.md", "tasks");
+		expect(plugin.chooseDatabaseMock).not.toHaveBeenCalled();
 	});
 
 	it("requires the user to pick a database before syncing the active note", async () => {
@@ -216,9 +224,58 @@ describe("NotionSyncPlugin", () => {
 		plugin.selection = null as never;
 
 		await plugin.onload();
+		plugin.settings.databases.push({
+			databaseId: "db-2",
+			id: "notes",
+			name: "Notes",
+			notionPageIdField: "notionPageId",
+			propertyMappings: [],
+			titleProperty: "Name",
+		});
 		await plugin.syncActiveFile(true);
 
 		expect(plugin.syncFile).not.toHaveBeenCalled();
+		expect(plugin.chooseDatabaseMock).toHaveBeenCalledTimes(1);
 		expect(notices).toEqual([]);
+	});
+
+	it("syncs immediately when exactly one database is configured", async () => {
+		const plugin = new TestPlugin({
+			workspace: {
+				getActiveFile: () => ({
+					extension: "md",
+					path: "Tasks/launch.md",
+				}),
+			},
+			vault: {},
+		});
+
+		await plugin.onload();
+		await plugin.syncActiveFile(true);
+
+		expect(plugin.chooseDatabaseMock).not.toHaveBeenCalled();
+		expect(plugin.syncFile).toHaveBeenCalledWith("Tasks/launch.md", "tasks");
+	});
+
+	it("surfaces a specific notice when sync is skipped for a diagnosable reason", async () => {
+		const plugin = new TestPlugin({
+			workspace: {
+				getActiveFile: () => ({
+					extension: "md",
+					path: "Tasks/launch.md",
+				}),
+			},
+			vault: {},
+		});
+		plugin.syncResult = {
+			message: "Active Markdown note could not be read from the vault.",
+			reason: "document-not-found",
+			status: "skipped",
+		};
+
+		await plugin.onload();
+		await plugin.syncActiveFile(true);
+
+		expect(notices).toContain("Active Markdown note could not be read from the vault.");
 	});
 });

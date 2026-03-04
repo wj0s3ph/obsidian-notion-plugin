@@ -8,32 +8,63 @@ export interface SyncServiceOptions {
 	notionRepository: NotionRepository;
 }
 
+export type SyncFileSkipReason =
+	| "document-not-found"
+	| "profile-not-found"
+	| "token-missing";
+
+export type SyncFileResult =
+	| {
+		status: "success";
+		summary: SyncSummary;
+	}
+	| {
+		message: string;
+		reason: SyncFileSkipReason;
+		status: "skipped";
+	};
+
 export class SyncService {
 	constructor(private readonly options: SyncServiceOptions) {}
 
-	async syncFile(path: string, profileId: string): Promise<SyncSummary | null> {
+	async syncFile(path: string, profileId: string): Promise<SyncFileResult> {
+		if (!this.options.getSettings().notionToken.trim()) {
+			return {
+				message: "Configure a Notion integration token in plugin settings first.",
+				reason: "token-missing",
+				status: "skipped",
+			};
+		}
+
 		const profile = this.getConfiguredProfiles().find((entry) => entry.id === profileId);
 		if (!profile) {
-			return null;
+			return {
+				message: "Selected Notion database profile is not available.",
+				reason: "profile-not-found",
+				status: "skipped",
+			};
 		}
 
 		const document = await this.options.localRepository.readDocument(path);
 		if (!document) {
-			return null;
+			return {
+				message: "Active Markdown note could not be read from the vault.",
+				reason: "document-not-found",
+				status: "skipped",
+			};
 		}
 
-		return syncDatabaseFile(profile, path, {
-			localRepository: this.options.localRepository,
-			notionRepository: this.options.notionRepository,
-		});
+		return {
+			status: "success",
+			summary: await syncDatabaseFile(profile, path, {
+				localRepository: this.options.localRepository,
+				notionRepository: this.options.notionRepository,
+			}),
+		};
 	}
 
 	private getConfiguredProfiles(): DatabaseSyncSetting[] {
 		const settings = this.options.getSettings();
-		if (!settings.notionToken.trim()) {
-			return [];
-		}
-
 		return settings.databases.filter((profile) => profile.databaseId.trim());
 	}
 }

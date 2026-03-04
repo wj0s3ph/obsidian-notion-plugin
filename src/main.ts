@@ -62,25 +62,29 @@ export default class NotionSyncPlugin extends Plugin {
 		}
 
 		try {
-			const database = await this.chooseDatabase(databases);
+			const database = await this.selectDatabase(databases);
 			if (!database) {
 				return null;
 			}
 
-			const summary = await this.syncService.syncFile(file.path, database.id);
-			if (!summary) {
+			const result = await this.syncService.syncFile(file.path, database.id);
+			if (result.status !== "success") {
 				if (notify) {
-					new Notice("Unable to sync the active note with the selected database.");
+					new Notice(result.message);
 				}
 				return null;
 			}
 
 			if (notify) {
-				new Notice(this.formatSummary(`Synced ${database.name || "database"}`, summary));
+				new Notice(this.formatSummary(`Synced ${database.name || "database"}`, result.summary));
 			}
-			return summary;
+			return result.summary;
 		} catch (error) {
-			this.handleSyncError(error, `Failed to sync ${file.path}`, notify);
+			this.handleSyncError(
+				error,
+				`Failed to sync ${file.path} with ${this.describeDatabaseSelection(databases)}`,
+				notify,
+			);
 			return null;
 		}
 	}
@@ -97,6 +101,16 @@ export default class NotionSyncPlugin extends Plugin {
 
 	protected chooseDatabase(databases: DatabaseSyncSetting[]): Promise<DatabaseSyncSetting | null> {
 		return chooseDatabase(this.app, databases);
+	}
+
+	private async selectDatabase(
+		databases: DatabaseSyncSetting[],
+	): Promise<DatabaseSyncSetting | null> {
+		if (databases.length === 1) {
+			return databases[0] ?? null;
+		}
+
+		return this.chooseDatabase(databases);
 	}
 
 	private ensureTokenConfigured(notify: boolean): boolean {
@@ -118,8 +132,25 @@ export default class NotionSyncPlugin extends Plugin {
 	private handleSyncError(error: unknown, message: string, notify: boolean): void {
 		console.error(message, error);
 		if (notify) {
-			new Notice(message);
+			new Notice(this.describeSyncError(message, error));
 		}
+	}
+
+	private describeDatabaseSelection(databases: DatabaseSyncSetting[]): string {
+		if (databases.length === 1) {
+			const database = databases[0];
+			return database?.name || database?.databaseId || "selected database";
+		}
+
+		return "selected database";
+	}
+
+	private describeSyncError(message: string, error: unknown): string {
+		if (error instanceof Error && error.message.trim()) {
+			return `${message}: ${error.message}`;
+		}
+
+		return message;
 	}
 
 	private getConfiguredDatabases(): DatabaseSyncSetting[] {

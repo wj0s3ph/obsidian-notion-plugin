@@ -201,11 +201,14 @@ describe("SyncService", () => {
 		const createdSummary = await service.syncFile("Tasks/launch.md", "tasks");
 
 		expect(createdSummary).toEqual({
-			createdLocalDocuments: 0,
-			createdRemotePages: 1,
-			skipped: 0,
-			updatedLocalDocuments: 0,
-			updatedRemotePages: 0,
+			status: "success",
+			summary: {
+				createdLocalDocuments: 0,
+				createdRemotePages: 1,
+				skipped: 0,
+				updatedLocalDocuments: 0,
+				updatedRemotePages: 0,
+			},
 		});
 		expect(localRepository.read("Tasks/launch.md")?.frontmatter.notionPageId).toBe("page-1");
 		expect(localRepository.read("Notes/remote.md")?.content).toBe("# Local note");
@@ -220,7 +223,16 @@ describe("SyncService", () => {
 
 		const pulledSummary = await service.syncFile("Notes/remote.md", "notes");
 
-		expect(pulledSummary?.updatedLocalDocuments).toBe(1);
+		expect(pulledSummary).toEqual({
+			status: "success",
+			summary: {
+				createdLocalDocuments: 0,
+				createdRemotePages: 0,
+				skipped: 0,
+				updatedLocalDocuments: 1,
+				updatedRemotePages: 0,
+			},
+		});
 		expect(localRepository.read("Notes/remote.md")?.content).toBe("# Remote revision");
 		expect(localRepository.read("Tasks/launch.md")?.content).toBe("# Local launch");
 	});
@@ -254,8 +266,20 @@ describe("SyncService", () => {
 			notionRepository,
 		});
 
-		await expect(service.syncFile("Tasks/missing.md", "tasks")).resolves.toBeNull();
-		await expect(service.syncFile("Tasks/launch.md", "missing")).resolves.toBeNull();
-		await expect(withoutToken.syncFile("Tasks/launch.md", "tasks")).resolves.toBeNull();
+		await expect(service.syncFile("Tasks/missing.md", "tasks")).resolves.toEqual({
+			message: "Active Markdown note could not be read from the vault.",
+			reason: "document-not-found",
+			status: "skipped",
+		});
+		await expect(service.syncFile("Tasks/launch.md", "missing")).resolves.toEqual({
+			message: "Selected Notion database profile is not available.",
+			reason: "profile-not-found",
+			status: "skipped",
+		});
+		await expect(withoutToken.syncFile("Tasks/launch.md", "tasks")).resolves.toEqual({
+			message: "Configure a Notion integration token in plugin settings first.",
+			reason: "token-missing",
+			status: "skipped",
+		});
 	});
 });
