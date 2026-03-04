@@ -1,4 +1,5 @@
 import { Client } from "@notionhq/client";
+import * as obsidian from "obsidian";
 
 import type { NotionDatabaseSnapshot, NotionPage, NotionRepository } from "../sync/engine";
 
@@ -189,22 +190,56 @@ export class NotionApiRepository implements NotionRepository {
 	}
 }
 
-export function createNotionClientFactory(getToken: () => string): () => NotionClientLike {
+interface NotionClientTransportOptions {
+	fetch?: typeof globalThis.fetch;
+	requestUrl?: typeof obsidian.requestUrl;
+}
+
+export function createNotionClientFactory(
+	getToken: () => string,
+	transport: NotionClientTransportOptions = {},
+): () => NotionClientLike {
 	return () => new Client({
 		auth: getToken().trim(),
-		fetch: createBrowserSafeFetch(),
+		fetch: createNotionFetchTransport({
+			fetch: "fetch" in transport ? transport.fetch : globalThis.fetch,
+			requestUrl: "requestUrl" in transport ? transport.requestUrl : obsidian.requestUrl,
+		}),
 	}) as NotionClientLike;
 }
 
-function createBrowserSafeFetch(): typeof fetch | undefined {
-	if (typeof globalThis.fetch !== "function") {
+function createNotionFetchTransport(
+	transport: NotionClientTransportOptions,
+): typeof fetch | undefined {
+	if (typeof transport.requestUrl === "function") {
+		return createRequestUrlFetch(transport.requestUrl);
+	}
+
+	if (typeof transport.fetch !== "function") {
 		return undefined;
 	}
 
-	return (input, init) => globalThis.fetch(
+	const fetchImplementation = transport.fetch;
+	return (input, init) => fetchImplementation.call(
+		globalThis,
 		input,
 		sanitizeRequestInit(init),
 	);
+}
+
+function createRequestUrlFetch(requestUrl: typeof obsidian.requestUrl): typeof fetch {
+	return async (input, init) => {
+		const sanitized = sanitizeRequestInit(init);
+		const response = await requestUrl({
+			body: getRequestBody(sanitized?.body),
+			contentType: getContentTypeHeader(sanitized?.headers),
+			headers: sanitizeHeaderRecord(sanitized?.headers),
+			method: sanitized?.method,
+			throw: false,
+			url: typeof input === "string" ? input : input.toString(),
+		});
+		return createResponseLike(response);
+	};
 }
 
 function sanitizeRequestInit(init: RequestInit | undefined): RequestInit | undefined {
@@ -229,6 +264,31 @@ function sanitizeHeaders(headers: HeadersInit | undefined): HeadersInit | undefi
 	return headersToPlainObject(sanitized);
 }
 
+function sanitizeHeaderRecord(headers: HeadersInit | undefined): Record<string, string> | undefined {
+	const sanitized = sanitizeHeaders(headers);
+	if (!sanitized) {
+		return undefined;
+	}
+
+	return sanitized instanceof Headers
+		? headersToPlainObject(sanitized)
+		: Array.isArray(sanitized)
+			? Object.fromEntries(sanitized)
+			: sanitized;
+}
+
+function getContentTypeHeader(headers: HeadersInit | undefined): string | undefined {
+	return sanitizeHeaderRecord(headers)?.["content-type"];
+}
+
+function getRequestBody(body: BodyInit | null | undefined): string | ArrayBuffer | undefined {
+	if (typeof body === "string" || body instanceof ArrayBuffer) {
+		return body;
+	}
+
+	return undefined;
+}
+
 function headersToPlainObject(headers: Headers): Record<string, string> {
 	const result: Record<string, string> = {};
 
@@ -237,6 +297,22 @@ function headersToPlainObject(headers: Headers): Record<string, string> {
 	});
 
 	return result;
+}
+
+function createResponseLike(response: Awaited<ReturnType<typeof obsidian.requestUrl>>): Response {
+	if (typeof Response === "function") {
+		return new Response(response.text, {
+			headers: response.headers,
+			status: response.status,
+		});
+	}
+
+	return {
+		headers: new Headers(response.headers),
+		ok: response.status >= 200 && response.status < 300,
+		status: response.status,
+		text: async () => response.text,
+	} as Response;
 }
 
 function assertPageLike(value: unknown): PageLike {

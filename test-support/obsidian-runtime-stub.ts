@@ -2,6 +2,10 @@ export class Notice {
 	constructor(_message?: string) {}
 }
 
+export function requestUrl(): Promise<never> {
+	return Promise.reject(new Error("requestUrl is not implemented in tests"));
+}
+
 export class Plugin {
 	app: unknown;
 

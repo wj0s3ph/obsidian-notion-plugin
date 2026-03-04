@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import * as obsidian from "obsidian";
 
 const { clientConstructor } = vi.hoisted(() => ({
 	clientConstructor: vi.fn(function (this: unknown, options: Record<string, unknown>) {
@@ -26,11 +27,14 @@ describe("createNotionClientFactory", () => {
 				throw new TypeError("Illegal invocation");
 			}
 
-			return Promise.resolve({ ok: true });
+			return Promise.resolve(new Response("", { status: 200 }));
 		});
 		vi.stubGlobal("fetch", rawFetch);
 
-		const createClient = createNotionClientFactory(() => " secret_test ");
+		const createClient = createNotionClientFactory(() => " secret_test ", {
+			fetch: rawFetch,
+			requestUrl: undefined,
+		});
 		const client = createClient() as { options?: Record<string, unknown> };
 
 		expect(clientConstructor).toHaveBeenCalledTimes(1);
@@ -40,15 +44,18 @@ describe("createNotionClientFactory", () => {
 		expect(typeof fetchOption).toBe("function");
 		await expect(
 			(fetchOption as (input: string) => Promise<unknown>)("https://example.com"),
-		).resolves.toEqual({ ok: true });
+		).resolves.toBeInstanceOf(Response);
 		expect(rawFetch).toHaveBeenCalledTimes(1);
 	});
 
 	it("strips browser-unsafe request options before delegating to fetch", async () => {
-		const rawFetch = vi.fn(async () => ({ ok: true }));
+		const rawFetch = vi.fn(async () => new Response("", { status: 200 }));
 		vi.stubGlobal("fetch", rawFetch);
 
-		const createClient = createNotionClientFactory(() => "secret_test");
+		const createClient = createNotionClientFactory(() => "secret_test", {
+			fetch: rawFetch,
+			requestUrl: undefined,
+		});
 		const client = createClient() as { options?: Record<string, unknown> };
 		const fetchOption = client.options?.fetch as (
 			input: string,
@@ -73,5 +80,60 @@ describe("createNotionClientFactory", () => {
 			},
 			method: "POST",
 		});
+	});
+
+	it("uses Obsidian requestUrl to bypass browser fetch restrictions", async () => {
+		const requestUrlMock = vi.spyOn(obsidian, "requestUrl").mockResolvedValue({
+			arrayBuffer: new ArrayBuffer(0),
+			headers: {
+				"content-type": "application/json",
+			},
+			json: {
+				ok: true,
+			},
+			status: 200,
+			text: "{\"ok\":true}",
+		});
+		const rawFetch = vi.fn(async () => new Response("", { status: 200 }));
+		vi.stubGlobal("fetch", rawFetch);
+
+		const createClient = createNotionClientFactory(() => "secret_test");
+		const client = createClient() as { options?: Record<string, unknown> };
+		const fetchOption = client.options?.fetch as (
+			input: string,
+			init?: Record<string, unknown>,
+		) => Promise<{
+			headers: Headers;
+			ok: boolean;
+			status: number;
+			text: () => Promise<string>;
+		}>;
+
+		const response = await fetchOption("https://api.notion.com/v1/data_sources/db/query", {
+			body: "{\"filter\":{}}",
+			headers: {
+				authorization: "Bearer secret",
+				"content-type": "application/json",
+				"user-agent": "notionhq-client/test",
+			},
+			method: "POST",
+		});
+
+		expect(requestUrlMock).toHaveBeenCalledWith({
+			body: "{\"filter\":{}}",
+			contentType: "application/json",
+			headers: {
+				authorization: "Bearer secret",
+				"content-type": "application/json",
+			},
+			method: "POST",
+			throw: false,
+			url: "https://api.notion.com/v1/data_sources/db/query",
+		});
+		expect(rawFetch).not.toHaveBeenCalled();
+		expect(response.ok).toBe(true);
+		expect(response.status).toBe(200);
+		await expect(response.text()).resolves.toBe("{\"ok\":true}");
+		expect(response.headers.get("content-type")).toBe("application/json");
 	});
 });
