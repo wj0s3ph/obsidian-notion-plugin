@@ -1,8 +1,11 @@
-/*
+.notion-sync-profile {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 12px;
+	margin: 1rem 0;
+	padding: 0.75rem 1rem;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
+.notion-sync-profile h4,
+.notion-sync-profile h5 {
+	margin: 0.25rem 0 0.75rem;
+}

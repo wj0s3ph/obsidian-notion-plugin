@@ -249,3 +249,33 @@ this.registerInterval(window.setInterval(() => { /* ... */ }, 1000));
 - Developer policies: https://docs.obsidian.md/Developer+policies
 - Plugin guidelines: https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines
 - Style guide: https://help.obsidian.md/style-guide
+
+## Commit Guidelines
+
+- Create commits with scripts/committer "<msg>" <file...>; avoid manual git add/git commit so staging stays scoped.
+- Follow concise, action-oriented commit messages (e.g., CLI: add verbose flag to send).
+- Group related changes; avoid bundling unrelated refactors
+
+## Shorthand Commands
+- 'sync': if working tree is dirty, commit all changes (pick a sensible Conventional Commit message), then git pull --rebase; if rebase conflicts and cannot resolve, stop; otherwise git push.
+
+## Git Notes
+
+- If git branch -d/-D <branch> is policy-blocked, delete the local ref directly: git update-ref -d refs/heads/<branch>.
+- Bulk PR close/reopen safety: if a close action would affect more than 5 PRs, first ask for explicit user confirmation with the exact PR count and target scope/query.
+
+## Changelog Release Notes
+
+- Keep top version entries in CHANGELOG.md sorted by impact:
+
+    - ### Changes first.
+    - ### Fixes deduped and ranked with user-facing fixes first.
+
+## Testing Guidelines
+
+- Framework: Vitest with V8 coverage thresholds (70% lines/branches/functions/statements).
+- Naming: match source names with *.test.ts; e2e in *.e2e.test.ts.
+- Run pnpm test (or pnpm test:coverage) before pushing when you touch logic.
+- Changelog: user-facing changes only; no internal/meta notes (version alignment, appcast reminders, release process).
+- Pure test additions/fixes generally do not need a changelog entry unless they alter user-facing behavior or the user asks for one.
+

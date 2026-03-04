@@ -1,99 +1,164 @@
-import {App, Editor, MarkdownView, Modal, Notice, Plugin} from 'obsidian';
-import {DEFAULT_SETTINGS, MyPluginSettings, SampleSettingTab} from "./settings";
+import { Notice, Plugin, TFile } from "obsidian";
 
-// Remember to rename these classes and interfaces!
+import { registerCommands } from "./commands";
+import { createNotionClientFactory, NotionApiRepository } from "./notion/notion-api-repository";
+import { VaultDocumentRepository } from "./obsidian/vault-document-repository";
+import {
+	coercePersistedSettings,
+	DEFAULT_SETTINGS,
+	type NotionSyncPluginSettings,
+	normalizeSettings,
+} from "./settings";
+import { type SyncSummary } from "./sync/engine";
+import { SyncService } from "./sync/sync-service";
+import { NotionSyncSettingTab } from "./ui/settings-tab";
 
-export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
+export default class NotionSyncPlugin extends Plugin {
+	settings: NotionSyncPluginSettings = DEFAULT_SETTINGS;
 
-	async onload() {
+	private readonly pendingFileSyncs = new Map<string, number>();
+
+	private syncService: SyncService | null = null;
+
+	async onload(): Promise<void> {
 		await this.loadSettings();
-
-		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Sample', (evt: MouseEvent) => {
-			// Called when the user clicks the icon.
-			new Notice('This is a notice!');
+		this.syncService = new SyncService({
+			getSettings: () => this.settings,
+			localRepository: new VaultDocumentRepository(this.app.vault),
+			notionRepository: new NotionApiRepository(
+				createNotionClientFactory(() => this.settings.notionToken),
+			),
 		});
 
-		// This adds a status bar item to the bottom of the app. Does not work on mobile apps.
-		const statusBarItemEl = this.addStatusBarItem();
-		statusBarItemEl.setText('Status bar text');
-
-		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
-			id: 'open-modal-simple',
-			name: 'Open modal (simple)',
-			callback: () => {
-				new SampleModal(this.app).open();
+		registerCommands(this);
+		this.addSettingTab(new NotionSyncSettingTab(this.app, this));
+		this.registerEvent(this.app.vault.on("create", (file) => {
+			if (file instanceof TFile) {
+				this.handleVaultChange(file);
 			}
-		});
-		// This adds an editor command that can perform some operation on the current editor instance
-		this.addCommand({
-			id: 'replace-selected',
-			name: 'Replace selected content',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
-				editor.replaceSelection('Sample editor command');
+		}));
+		this.registerEvent(this.app.vault.on("modify", (file) => {
+			if (file instanceof TFile) {
+				this.handleVaultChange(file);
 			}
-		});
-		// This adds a complex command that can check whether the current state of the app allows execution of the command
-		this.addCommand({
-			id: 'open-modal-complex',
-			name: 'Open modal (complex)',
-			checkCallback: (checking: boolean) => {
-				// Conditions to check
-				const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
-				if (markdownView) {
-					// If checking is true, we're simply "checking" if the command can be run.
-					// If checking is false, then we want to actually perform the operation.
-					if (!checking) {
-						new SampleModal(this.app).open();
-					}
+		}));
+		this.registerInterval(window.setInterval(() => {
+			void this.syncDueProfiles();
+		}, 30_000));
 
-					// This command will only show up in Command Palette when the check function returns true
-					return true;
-				}
-				return false;
-			}
-		});
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			new Notice("Click");
-		});
-
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
-
+		if (this.settings.syncOnStartup) {
+			void this.syncAllDatabases(false);
+		}
 	}
 
-	onunload() {
+	async loadSettings(): Promise<void> {
+		const persistedSettings: unknown = await this.loadData();
+		this.settings = normalizeSettings(coercePersistedSettings(persistedSettings));
 	}
 
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData() as Partial<MyPluginSettings>);
-	}
-
-	async saveSettings() {
+	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
 	}
-}
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
+	onunload(): void {
+		for (const timeout of this.pendingFileSyncs.values()) {
+			window.clearTimeout(timeout);
+		}
+
+		this.pendingFileSyncs.clear();
 	}
 
-	onOpen() {
-		let {contentEl} = this;
-		contentEl.setText('Woah!');
+	async syncAllDatabases(notify: boolean): Promise<SyncSummary | null> {
+		if (!this.ensureTokenConfigured(notify) || !this.syncService) {
+			return null;
+		}
+
+		try {
+			const summary = await this.syncService.syncAll();
+			if (notify) {
+				new Notice(this.formatSummary("Synced databases", summary));
+			}
+			return summary;
+		} catch (error) {
+			this.handleSyncError(error, "Failed to sync all databases", notify);
+			return null;
+		}
 	}
 
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
+	async syncFilePath(path: string, notify: boolean): Promise<SyncSummary | null> {
+		if (!this.ensureTokenConfigured(notify) || !this.syncService) {
+			return null;
+		}
+
+		try {
+			const summary = await this.syncService.syncFile(path);
+			if (!summary) {
+				if (notify) {
+					new Notice("No matching sync profile for the active note.");
+				}
+				return null;
+			}
+
+			if (notify) {
+				new Notice(this.formatSummary("Synced note profile", summary));
+			}
+			return summary;
+		} catch (error) {
+			this.handleSyncError(error, `Failed to sync ${path}`, notify);
+			return null;
+		}
+	}
+
+	private ensureTokenConfigured(notify: boolean): boolean {
+		if (this.settings.notionToken.trim()) {
+			return true;
+		}
+
+		if (notify) {
+			new Notice("Configure a Notion integration token in plugin settings first.");
+		}
+		return false;
+	}
+
+	private formatSummary(prefix: string, summary: SyncSummary): string {
+		return `${prefix}: +${summary.createdRemotePages} remote, +${summary.createdLocalDocuments} local, `
+			+ `~${summary.updatedRemotePages} remote, ~${summary.updatedLocalDocuments} local.`;
+	}
+
+	private handleSyncError(error: unknown, message: string, notify: boolean): void {
+		console.error(message, error);
+		if (notify) {
+			new Notice(message);
+		}
+	}
+
+	private handleVaultChange(file: TFile): void {
+		if (file.extension !== "md") {
+			return;
+		}
+
+		const existingTimeout = this.pendingFileSyncs.get(file.path);
+		if (existingTimeout !== undefined) {
+			window.clearTimeout(existingTimeout);
+		}
+
+		const timeout = window.setTimeout(() => {
+			this.pendingFileSyncs.delete(file.path);
+			void this.syncFilePath(file.path, false);
+		}, 1000);
+
+		this.pendingFileSyncs.set(file.path, timeout);
+	}
+
+	private async syncDueProfiles(): Promise<void> {
+		if (!this.ensureTokenConfigured(false) || !this.syncService) {
+			return;
+		}
+
+		try {
+			await this.syncService.syncDueProfiles();
+		} catch (error) {
+			this.handleSyncError(error, "Background sync failed", false);
+		}
 	}
 }

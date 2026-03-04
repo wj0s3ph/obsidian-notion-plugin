@@ -5,6 +5,11 @@ import { globalIgnores } from "eslint/config";
 
 export default tseslint.config(
 	{
+		files: [
+			"src/**/*.{ts,js,mts,mjs,cts,cjs}",
+			"vitest.config.ts",
+			"eslint.config.mts",
+		],
 		languageOptions: {
 			globals: {
 				...globals.browser,
@@ -12,23 +17,24 @@ export default tseslint.config(
 			parserOptions: {
 				projectService: {
 					allowDefaultProject: [
-						'eslint.config.js',
-						'manifest.json'
+						"eslint.config.mts",
+						"vitest.config.ts",
 					]
 				},
 				tsconfigRootDir: import.meta.dirname,
-				extraFileExtensions: ['.json']
 			},
 		},
 	},
 	...obsidianmd.configs.recommended,
 	globalIgnores([
+		"**/*.json",
 		"node_modules",
 		"dist",
+		"coverage",
 		"esbuild.config.mjs",
-		"eslint.config.js",
 		"version-bump.mjs",
 		"versions.json",
 		"main.js",
+		"test-support",
 	]),
 );
