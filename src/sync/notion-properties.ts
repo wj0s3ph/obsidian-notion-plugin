@@ -82,7 +82,7 @@ export function buildNotionPropertyPayload(
 		}
 
 		const notionValue = serializeNotionValue(propertyType, value);
-		if (!notionValue) {
+		if (notionValue === null) {
 			return payload;
 		}
 

@@ -126,6 +126,43 @@ describe("buildNotionPropertyPayload", () => {
 		});
 	});
 
+	it("preserves false and zero values instead of dropping them as empty payloads", () => {
+		const payload = buildNotionPropertyPayload({
+			frontmatter: {
+				done: false,
+				estimate: 0,
+			},
+			mappings: [
+				{
+					direction: "bidirectional",
+					notionProperty: "Done",
+					obsidianKey: "done",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Estimate",
+					obsidianKey: "estimate",
+				},
+			],
+			notionSchema: {
+				Done: "checkbox",
+				Estimate: "number",
+			},
+			syncDirection: "obsidian-to-notion",
+		});
+
+		expect(payload).toEqual({
+			Done: {
+				checkbox: false,
+				type: "checkbox",
+			},
+			Estimate: {
+				number: 0,
+				type: "number",
+			},
+		});
+	});
+
 	it("supports rich text, select, date and url payload serialization", () => {
 		const payload = buildNotionPropertyPayload({
 			frontmatter: {
