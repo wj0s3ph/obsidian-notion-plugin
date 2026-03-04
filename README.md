@@ -57,24 +57,46 @@ Read-only or unsupported Notion property types are intentionally not written bac
 
 ### Setup
 
-1. Create a Notion internal integration and copy its token.
-2. Share the target Notion database with that integration.
-3. Build or install the plugin into `<Vault>/.obsidian/plugins/obsidian-notion-plugin/`.
-4. Open **Settings → Community plugins → Notion Database Sync**.
-5. Paste the integration token.
-6. Add a database profile.
-7. Fill in:
+1. Create a Notion internal integration.
+   Open Notion integrations, click `+ New integration`, choose the workspace, and create an internal integration. Only a workspace owner can create integrations for that workspace.
+2. Enable the right capabilities for the integration.
+   This plugin needs content access for the database you want to sync. In practice, enable read content and write or insert capabilities so the plugin can read pages, update pages, and create pages.
+3. Copy the integration token from the integration configuration page.
+   Keep this token private. Do not commit it to source control or share it in screenshots.
+4. Share the target Notion page or database with the integration.
+   In Notion, open the page that contains the database, click the `...` menu, choose `Add connections`, then select your integration. If the integration cannot access the parent page, API calls will fail even if the token is valid.
+5. Find the Notion database ID.
+   Open the database as a full page, copy its link, and extract the UUID in the URL. Notion accepts hyphenated and unhyphenated forms. This plugin lets you paste the database ID directly.
+6. Build or install the plugin into `<Vault>/.obsidian/plugins/obsidian-notion-plugin/`.
+7. Open **Settings → Community plugins → Notion Database Sync**.
+8. Paste the integration token.
+9. Add a database profile.
+10. Fill in:
    - profile name
    - Notion database ID
    - title property
-8. Click **Fetch properties** once.
-9. Add property mappings by choosing a frontmatter key and a Notion property from the dropdown.
+11. Click **Fetch properties** once.
+   This reads the remote database schema and caches the available property names for the mapping dropdown.
+12. Add property mappings by entering a frontmatter key and selecting a Notion property from the dropdown.
+
+### Notion-specific notes
+
+- Notion now refers to many database containers as data sources in the API. The plugin still asks for a "database ID" because that matches how most users find the ID in Notion.
+- If a mapped property depends on a relation, the related database may also need to be shared with the integration. Otherwise Notion may omit that property from the returned schema.
+- Linked databases are not a separate source of truth for the API. Share the original database with the integration instead of a linked view.
 
 ### Usage
 
 - Use the ribbon icon or command **Sync active note database** to push the current note into Notion.
 - Use the command **Pull active note from Notion** to overwrite the current note with the linked Notion page content and mapped properties.
 - On first sync, the plugin creates a Notion page and writes `notionPageId` into the note frontmatter.
+
+### Troubleshooting
+
+- `Failed to fetch` usually means the integration token is invalid, the target page or database was not shared with the integration, or the requested database ID is wrong.
+- If **Fetch properties** returns nothing useful, confirm you shared the original database, not only a linked database view.
+- If relation-based properties are missing, share the related databases with the same integration as well.
+- If sync creates or updates the page but mapped properties look wrong, verify the mapping names against the remote schema and re-run **Fetch properties**.
 
 ### Known behavior
 
@@ -169,24 +191,55 @@ Notion Database Sync 是一个 Obsidian 社区插件，用来把当前 Markdown 
 
 ### 配置步骤
 
-1. 在 Notion 中创建一个 internal integration，并复制 token。
-2. 把目标 Notion 数据库共享给这个 integration。
-3. 构建或安装插件到 `<Vault>/.obsidian/plugins/obsidian-notion-plugin/`。
-4. 打开 **Settings → Community plugins → Notion Database Sync**。
-5. 填入 integration token。
-6. 添加一个数据库配置。
-7. 填写以下信息：
+1. 在 Notion 中创建 internal integration。
+   打开 Notion integrations 页面，点击 `+ New integration`，选择工作区并创建 internal integration。只有该工作区的 workspace owner 才能创建 integration。
+2. 为 integration 打开合适的 capabilities。
+   这个插件需要访问数据库内容。实际配置上，至少应允许读取内容，以及写入或插入内容，这样插件才能读取页面、更新页面和创建页面。
+3. 在 integration 配置页复制 token。
+   这个 token 是密钥，不要提交到代码仓库，也不要在截图里暴露。
+4. 把目标数据库所在的页面或数据库共享给这个 integration。
+   在 Notion 中打开包含数据库的页面，点击右上角 `...`，选择 `Add connections`，再选中你的 integration。即使 token 正确，如果 integration 没有访问父页面，API 调用也会失败。
+5. 找到 Notion 数据库 ID。
+   把数据库作为整页打开，复制链接，从 URL 中提取 UUID。带连字符和不带连字符的写法都可以，这个插件支持直接粘贴数据库 ID。
+6. 构建或安装插件到 `<Vault>/.obsidian/plugins/obsidian-notion-plugin/`。
+7. 打开 **Settings → Community plugins → Notion Database Sync**。
+8. 填入 integration token。
+9. 添加一个数据库配置。
+10. 填写以下信息：
    - 配置名称
    - Notion 数据库 ID
    - 标题属性
-8. 点击一次 **Fetch properties / 拉取属性**。
-9. 在属性映射表中填写 frontmatter 键，并从下拉框选择对应的 Notion 属性。
+11. 点击一次 **Fetch properties / 拉取属性**。
+   这一步会读取远端数据库 schema，并把可用属性名缓存到映射下拉框里。
+12. 在属性映射表中填写 frontmatter 键，并从下拉框选择对应的 Notion 属性。
+
+### Notion 相关说明
+
+- Notion 在 API 里会把很多数据库容器称为 data source，但插件里仍然使用“数据库 ID”这个说法，因为这更符合大多数用户在 Notion 里的查找方式。
+- 如果映射的属性依赖 relation，相关数据库也可能需要共享给同一个 integration，否则 Notion 返回的 schema 里可能缺少这些属性。
+- Linked database 不是 API 的独立真实来源。应该共享原始数据库，而不是只共享一个 linked view。
 
 ### 使用方式
 
 - 使用侧边栏按钮或命令 **Sync active note database**，把当前笔记推送到 Notion。
 - 使用命令 **Pull active note from Notion**，把已关联的 Notion 页面内容和映射属性拉回当前笔记。
 - 首次同步时，插件会创建 Notion 页面，并把 `notionPageId` 写入笔记 frontmatter。
+
+### 排查问题
+
+- 出现 `Failed to fetch`，通常表示 integration token 无效、目标页面或数据库没有共享给 integration，或者数据库 ID 填错了。
+- 如果 **Fetch properties / 拉取属性** 没拿到有效结果，先确认你共享的是原始数据库，而不只是 linked database 视图。
+- 如果 relation 相关属性缺失，把关联数据库也共享给同一个 integration。
+- 如果页面能创建或更新，但属性映射结果不对，先对照远端 schema 检查映射名称，再重新执行一次 **Fetch properties / 拉取属性**。
+
+### Official Notion references / Notion 官方参考
+
+- Internal integration setup: https://developers.notion.com/guides/get-started/authorization
+- Create an integration: https://developers.notion.com/docs/create-a-notion-integration
+- Authentication: https://developers.notion.com/reference/authentication
+- Retrieve a database: https://developers.notion.com/reference/retrieve-a-database
+- Working with databases and data sources: https://developers.notion.com/docs/working-with-databases
+- Notion Help Center overview: https://www.notion.com/help/create-integrations-with-the-notion-api
 
 ### 当前行为说明
 
