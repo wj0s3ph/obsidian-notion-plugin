@@ -2,6 +2,8 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { DatabaseSyncSetting } from "./settings";
+
 const addCommand = vi.fn();
 const addRibbonIcon = vi.fn();
 const addSettingTab = vi.fn();
@@ -132,6 +134,10 @@ vi.mock("obsidian", () => {
 import NotionSyncPlugin from "./main";
 
 class TestPlugin extends NotionSyncPlugin {
+	constructor(app: unknown) {
+		super(app as never, {} as never);
+	}
+
 	selection = {
 		databaseId: "db-1",
 		id: "tasks",
@@ -149,7 +155,7 @@ class TestPlugin extends NotionSyncPlugin {
 		updatedRemotePages: 0,
 	}));
 
-	protected override async chooseDatabase() {
+	protected override async chooseDatabase(_databases: DatabaseSyncSetting[]) {
 		return this.selection;
 	}
 
