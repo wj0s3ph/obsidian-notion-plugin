@@ -205,7 +205,7 @@ describe("SyncService", () => {
 		expect(fullSummary.createdRemotePages).toBe(1);
 		expect(fullSummary.createdLocalDocuments).toBe(1);
 		expect(localRepository.read("Tasks/launch.md")?.frontmatter.notionPageId).toBe("page-1");
-		expect(localRepository.read("Notes/remote-note.md")?.content).toBe("# Remote note");
+		expect(localRepository.read("Notes/Remote note.md")?.content).toBe("# Remote note");
 
 		notionRepository.updateRemotePage(
 			"db-1",
