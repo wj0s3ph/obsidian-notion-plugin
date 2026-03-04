@@ -91,7 +91,7 @@ export async function syncDatabaseFile(
 		});
 
 		await options.localRepository.upsertDocument(
-			linkDocumentToPage(document, profile, createdPage.id, createdPage.lastEditedTime),
+			mergeRemoteIntoLocalDocument(document, createdPage, profile),
 		);
 		summary.createdRemotePages += 1;
 		return summary;
@@ -104,13 +104,16 @@ export async function syncDatabaseFile(
 	}
 
 	if (shouldPushLocalChanges(document, remotePage, profile, snapshot.schema)) {
-		await options.notionRepository.updatePage({
+		const updatedPage = await options.notionRepository.updatePage({
 			markdown: document.content,
 			pageId,
 			properties,
 			title: document.title,
 			titleProperty: profile.titleProperty,
 		});
+		await options.localRepository.upsertDocument(
+			mergeRemoteIntoLocalDocument(document, updatedPage, profile),
+		);
 		summary.updatedRemotePages += 1;
 		return summary;
 	}
@@ -220,22 +223,6 @@ function hasDifferentMappedProperties(
 
 function isEqual(left: unknown, right: unknown): boolean {
 	return JSON.stringify(left) === JSON.stringify(right);
-}
-
-function linkDocumentToPage(
-	document: LocalDocument,
-	profile: DatabaseSyncSetting,
-	pageId: string,
-	lastEditedTime: string,
-): LocalDocument {
-	return {
-		...document,
-		frontmatter: {
-			...document.frontmatter,
-			[profile.notionPageIdField]: pageId,
-		},
-		lastEditedTime,
-	};
 }
 
 function mergeRemoteIntoLocalDocument(

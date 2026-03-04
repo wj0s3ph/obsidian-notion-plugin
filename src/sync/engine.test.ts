@@ -264,6 +264,138 @@ describe("syncDatabaseFile", () => {
 		});
 	});
 
+	it("writes configured Notion-to-Obsidian properties back to local frontmatter after creating a page", async () => {
+		const profile = createProfile({
+			propertyMappings: [
+				{
+					direction: "notion-to-obsidian",
+					notionProperty: "Slug",
+					obsidianKey: "slug",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Status",
+					obsidianKey: "status",
+				},
+			],
+		});
+		const local = new InMemoryLocalRepository([{
+			content: "# Draft",
+			frontmatter: { status: "Todo" },
+			lastEditedTime: "2026-03-04T10:00:00.000Z",
+			path: "Tasks/launch.md",
+			title: "Launch",
+		}]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [],
+				schema: {
+					Name: "title",
+					Slug: "rich_text",
+					Status: "status",
+				},
+			},
+		});
+		notion.createPage = async (input) => ({
+			id: "page-1",
+			lastEditedTime: "2026-03-04T10:05:00.000Z",
+			markdown: input.markdown,
+			properties: {
+				Name: { type: "title", value: input.title },
+				Slug: { type: "rich_text", value: "launch" },
+				Status: { type: "status", value: "Todo" },
+			},
+			title: input.title,
+		});
+
+		await syncDatabaseFile(profile, "Tasks/launch.md", {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(local.getDocument("Tasks/launch.md")).toMatchObject({
+			frontmatter: {
+				notionPageId: "page-1",
+				slug: "launch",
+				status: "Todo",
+			},
+		});
+	});
+
+	it("writes configured Notion-to-Obsidian properties back to local frontmatter after pushing updates", async () => {
+		const profile = createProfile({
+			propertyMappings: [
+				{
+					direction: "notion-to-obsidian",
+					notionProperty: "Slug",
+					obsidianKey: "slug",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Status",
+					obsidianKey: "status",
+				},
+			],
+		});
+		const local = new InMemoryLocalRepository([{
+			content: "# Local update",
+			frontmatter: {
+				notionPageId: "page-1",
+				status: "In progress",
+			},
+			lastEditedTime: "2026-03-04T10:20:00.000Z",
+			path: "Tasks/launch.md",
+			title: "Launch",
+		}]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [{
+					id: "page-1",
+					lastEditedTime: "2026-03-04T10:10:00.000Z",
+					markdown: "# Remote old",
+					properties: {
+						Name: { type: "title", value: "Launch" },
+						Slug: { type: "rich_text", value: "launch" },
+						Status: { type: "status", value: "Todo" },
+					},
+					title: "Launch",
+				}],
+				schema: {
+					Name: "title",
+					Slug: "rich_text",
+					Status: "status",
+				},
+			},
+		});
+		notion.updatePage = async (input) => ({
+			id: input.pageId,
+			lastEditedTime: "2026-03-04T10:25:00.000Z",
+			markdown: input.markdown,
+			properties: {
+				Name: { type: "title", value: input.title },
+				Slug: { type: "rich_text", value: "launch-updated" },
+				Status: { type: "status", value: "In progress" },
+			},
+			title: input.title,
+		});
+
+		await syncDatabaseFile(profile, "Tasks/launch.md", {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(local.getDocument("Tasks/launch.md")).toMatchObject({
+			content: "# Local update",
+			frontmatter: {
+				notionPageId: "page-1",
+				slug: "launch-updated",
+				status: "In progress",
+			},
+		});
+	});
+
 	it("skips syncing when the note or database id is unavailable", async () => {
 		const local = new InMemoryLocalRepository([]);
 		const notion = new InMemoryNotionRepository({
