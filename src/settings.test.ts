@@ -12,10 +12,7 @@ describe("createDefaultDatabaseConfig", () => {
 		const profile = createDefaultDatabaseConfig("Projects");
 
 		expect(profile.name).toBe("Projects");
-		expect(profile.enabled).toBe(false);
-		expect(profile.folder).toBe("");
 		expect(profile.databaseId).toBe("");
-		expect(profile.syncIntervalSeconds).toBe(300);
 		expect(profile.notionPageIdField).toBe("notionPageId");
 		expect(profile.propertyMappings).toEqual([]);
 		expect(profile.id).toMatch(/^database-/);
@@ -38,14 +35,11 @@ describe("normalizeSettings", () => {
 
 		expect(database).toBeDefined();
 		expect(normalized.notionToken).toBe("secret_123");
-		expect(normalized.syncOnStartup).toBe(true);
 		expect(normalized.databases).toHaveLength(1);
 		expect(database).toMatchObject({
 			name: "Tasks",
 			databaseId: "db-1",
-			enabled: false,
 			propertyMappings: [],
-			syncIntervalSeconds: 300,
 		});
 	});
 
@@ -106,11 +100,9 @@ describe("coercePersistedSettings", () => {
 		expect(coercePersistedSettings({
 			databases: [],
 			notionToken: "secret_123",
-			syncOnStartup: true,
 		})).toEqual({
 			databases: [],
 			notionToken: "secret_123",
-			syncOnStartup: true,
 		});
 	});
 });

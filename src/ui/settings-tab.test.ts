@@ -162,7 +162,6 @@ describe("NotionSyncSettingTab", () => {
 			settings: {
 				databases: [profile],
 				notionToken: "",
-				syncOnStartup: true,
 			},
 		});
 
@@ -173,5 +172,9 @@ describe("NotionSyncSettingTab", () => {
 		expect(tab.containerEl.textContent).toContain("Database profiles");
 		expect(tab.containerEl.textContent).toContain("Tasks");
 		expect(tab.containerEl.textContent).toContain("Property mappings");
+		expect(tab.containerEl.textContent).not.toContain("Sync on startup");
+		expect(tab.containerEl.textContent).not.toContain("Enabled");
+		expect(tab.containerEl.textContent).not.toContain("Vault folder");
+		expect(tab.containerEl.textContent).not.toContain("Remote poll interval");
 	});
 });

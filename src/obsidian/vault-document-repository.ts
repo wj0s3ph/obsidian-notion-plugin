@@ -14,31 +14,29 @@ interface VaultLike {
 	create(path: string, data: string): Promise<FileLike>;
 	createFolder(path: string): Promise<unknown>;
 	getAbstractFileByPath(path: string): FileLike | { path: string } | null;
-	getMarkdownFiles(): FileLike[];
 	modify(file: FileLike, data: string): Promise<void>;
 }
 
 export class VaultDocumentRepository implements LocalDocumentRepository {
 	constructor(private readonly vault: VaultLike) {}
 
-	async listDocuments(folder: string): Promise<LocalDocument[]> {
-		const normalizedFolder = normalizePath(folder);
-		const documents = this.vault
-			.getMarkdownFiles()
-			.filter((file) => matchesFolder(normalizedFolder, normalizePath(file.path)));
+	async readDocument(path: string): Promise<LocalDocument | null> {
+		const normalizedPath = normalizePath(path);
+		const file = this.vault.getAbstractFileByPath(normalizedPath);
+		if (!isFile(file) || !normalizedPath.endsWith(".md")) {
+			return null;
+		}
 
-		return Promise.all(documents.map(async (file) => {
-			const markdown = await this.vault.cachedRead(file);
-			const document = parseMarkdownDocument(markdown);
+		const markdown = await this.vault.cachedRead(file);
+		const document = parseMarkdownDocument(markdown);
 
-			return {
-				content: document.content,
-				frontmatter: document.frontmatter,
-				lastEditedTime: new Date(file.stat.mtime).toISOString(),
-				path: normalizePath(file.path),
-				title: file.basename,
-			};
-		}));
+		return {
+			content: document.content,
+			frontmatter: document.frontmatter,
+			lastEditedTime: new Date(file.stat.mtime).toISOString(),
+			path: normalizedPath,
+			title: file.basename,
+		};
 	}
 
 	async upsertDocument(document: LocalDocument): Promise<void> {
@@ -71,10 +69,6 @@ export class VaultDocumentRepository implements LocalDocumentRepository {
 
 function isFile(file: FileLike | { path: string } | null): file is FileLike {
 	return Boolean(file && "basename" in file && "stat" in file);
-}
-
-function matchesFolder(folder: string, path: string): boolean {
-	return path === folder || path.startsWith(`${folder}/`);
 }
 
 function normalizePath(path: string): string {

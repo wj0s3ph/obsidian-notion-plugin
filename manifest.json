@@ -4,6 +4,6 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Bidirectional sync between Obsidian Markdown notes and multiple Notion databases.",
-	"author": "Local Developer",
+	"author": "wj0s3ph",
 	"isDesktopOnly": false
 }

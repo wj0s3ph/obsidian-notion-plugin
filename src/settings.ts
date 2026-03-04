@@ -12,18 +12,14 @@ export interface PropertyMappingSetting {
 export interface DatabaseSyncSetting {
 	id: string;
 	name: string;
-	enabled: boolean;
-	folder: string;
 	databaseId: string;
 	notionPageIdField: string;
 	propertyMappings: PropertyMappingSetting[];
-	syncIntervalSeconds: number;
 	titleProperty: string;
 }
 
 export interface NotionSyncPluginSettings {
 	notionToken: string;
-	syncOnStartup: boolean;
 	databases: DatabaseSyncSetting[];
 }
 
@@ -36,41 +32,32 @@ export interface PersistedPropertyMappingSetting {
 export interface PersistedDatabaseSyncSetting {
 	id?: string;
 	name?: string;
-	enabled?: boolean;
-	folder?: string;
 	databaseId?: string;
 	notionPageIdField?: string;
 	propertyMappings?: PersistedPropertyMappingSetting[];
-	syncIntervalSeconds?: number;
 	titleProperty?: string;
 }
 
 export interface PersistedPluginSettings {
 	notionToken?: string;
-	syncOnStartup?: boolean;
 	databases?: PersistedDatabaseSyncSetting[];
 }
 
-const DEFAULT_SYNC_INTERVAL_SECONDS = 300;
 const DEFAULT_TITLE_PROPERTY = "Name";
 const DEFAULT_NOTION_PAGE_ID_FIELD = "notionPageId";
 
 export const DEFAULT_SETTINGS: NotionSyncPluginSettings = {
 	databases: [],
 	notionToken: "",
-	syncOnStartup: true,
 };
 
 export function createDefaultDatabaseConfig(name = "New database"): DatabaseSyncSetting {
 	return {
 		databaseId: "",
-		enabled: false,
-		folder: "",
 		id: createConfigId(),
 		name,
 		notionPageIdField: DEFAULT_NOTION_PAGE_ID_FIELD,
 		propertyMappings: [],
-		syncIntervalSeconds: DEFAULT_SYNC_INTERVAL_SECONDS,
 		titleProperty: DEFAULT_TITLE_PROPERTY,
 	};
 }
@@ -81,7 +68,6 @@ export function normalizeSettings(
 	return {
 		databases: (settings?.databases ?? []).map(normalizeDatabaseConfig),
 		notionToken: settings?.notionToken ?? DEFAULT_SETTINGS.notionToken,
-		syncOnStartup: settings?.syncOnStartup ?? DEFAULT_SETTINGS.syncOnStartup,
 	};
 }
 
@@ -109,13 +95,10 @@ function normalizeDatabaseConfig(
 	return {
 		...defaults,
 		databaseId: config.databaseId ?? defaults.databaseId,
-		enabled: config.enabled ?? defaults.enabled,
-		folder: config.folder ?? defaults.folder,
 		id: config.id ?? defaults.id,
 		name: config.name ?? defaults.name,
 		notionPageIdField: config.notionPageIdField ?? defaults.notionPageIdField,
 		propertyMappings: normalizePropertyMappings(config.propertyMappings),
-		syncIntervalSeconds: config.syncIntervalSeconds ?? defaults.syncIntervalSeconds,
 		titleProperty: config.titleProperty ?? defaults.titleProperty,
 	};
 }

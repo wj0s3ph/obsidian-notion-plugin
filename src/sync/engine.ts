@@ -10,7 +10,7 @@ export interface LocalDocument {
 }
 
 export interface LocalDocumentRepository {
-	listDocuments(folder: string): Promise<LocalDocument[]>;
+	readDocument(path: string): Promise<LocalDocument | null>;
 	upsertDocument(document: LocalDocument): Promise<void>;
 }
 
@@ -46,7 +46,7 @@ export interface NotionRepository {
 	}): Promise<NotionPage>;
 }
 
-export interface SyncDatabaseProfilesOptions {
+export interface SyncDatabaseFileOptions {
 	localRepository: LocalDocumentRepository;
 	notionRepository: NotionRepository;
 }
@@ -59,117 +59,72 @@ export interface SyncSummary {
 	updatedRemotePages: number;
 }
 
-export async function syncDatabaseProfiles(
-	profiles: DatabaseSyncSetting[],
-	options: SyncDatabaseProfilesOptions,
-): Promise<SyncSummary> {
-	const summary = createEmptySummary();
-
-	for (const profile of profiles) {
-		if (!profile.enabled || !profile.databaseId.trim()) {
-			summary.skipped += 1;
-			continue;
-		}
-
-		const profileSummary = await syncProfile(profile, options);
-		mergeSummary(summary, profileSummary);
-	}
-
-	return summary;
-}
-
-async function syncProfile(
+export async function syncDatabaseFile(
 	profile: DatabaseSyncSetting,
-	options: SyncDatabaseProfilesOptions,
+	path: string,
+	options: SyncDatabaseFileOptions,
 ): Promise<SyncSummary> {
 	const summary = createEmptySummary();
-	const snapshot = await options.notionRepository.getDatabaseSnapshot(profile.databaseId);
-	const localDocuments = await options.localRepository.listDocuments(profile.folder);
-	const remotePagesById = new Map(snapshot.pages.map((page) => [page.id, page]));
-	const knownPaths = new Set(localDocuments.map((document) => document.path));
-	const linkedRemotePageIds = new Set<string>();
-
-	for (const document of localDocuments) {
-		const pageId = getLinkedPageId(document, profile);
-		const properties = buildRemotePayload(document, profile, snapshot.schema);
-
-		if (!pageId || !remotePagesById.has(pageId)) {
-			const createdPage = await options.notionRepository.createPage({
-				databaseId: snapshot.databaseId,
-				markdown: document.content,
-				properties,
-				title: document.title,
-				titleProperty: profile.titleProperty,
-			});
-
-			linkedRemotePageIds.add(createdPage.id);
-			await options.localRepository.upsertDocument(linkDocumentToPage(document, profile, createdPage.id, createdPage.lastEditedTime));
-			summary.createdRemotePages += 1;
-			continue;
-		}
-
-		const remotePage = remotePagesById.get(pageId);
-		if (!remotePage) {
-			continue;
-		}
-
-		linkedRemotePageIds.add(pageId);
-
-		if (shouldPushLocalChanges(document, remotePage, profile, snapshot.schema)) {
-			const updatedPage = await options.notionRepository.updatePage({
-				markdown: document.content,
-				pageId,
-				properties,
-				title: document.title,
-				titleProperty: profile.titleProperty,
-			});
-			remotePagesById.set(updatedPage.id, updatedPage);
-			summary.updatedRemotePages += 1;
-			continue;
-		}
-
-		if (shouldPullRemoteChanges(document, remotePage, profile, snapshot.schema)) {
-			await options.localRepository.upsertDocument(
-				mergeRemoteIntoLocalDocument(document, remotePage, profile),
-			);
-			summary.updatedLocalDocuments += 1;
-			continue;
-		}
-
+	if (!profile.databaseId.trim()) {
 		summary.skipped += 1;
+		return summary;
 	}
 
-	for (const remotePage of snapshot.pages) {
-		if (linkedRemotePageIds.has(remotePage.id)) {
-			continue;
-		}
+	const document = await options.localRepository.readDocument(path);
+	if (!document) {
+		summary.skipped += 1;
+		return summary;
+	}
 
-		const path = buildImportedDocumentPath(profile.folder, remotePage.title, knownPaths);
-		knownPaths.add(path);
+	const snapshot = await options.notionRepository.getDatabaseSnapshot(profile.databaseId);
+	const remotePagesById = new Map(snapshot.pages.map((page) => [page.id, page]));
+	const pageId = getLinkedPageId(document, profile);
+	const properties = buildRemotePayload(document, profile, snapshot.schema);
+
+	if (!pageId || !remotePagesById.has(pageId)) {
+		const createdPage = await options.notionRepository.createPage({
+			databaseId: snapshot.databaseId,
+			markdown: document.content,
+			properties,
+			title: document.title,
+			titleProperty: profile.titleProperty,
+		});
+
 		await options.localRepository.upsertDocument(
-			createLocalDocumentFromRemotePage(path, profile, remotePage),
+			linkDocumentToPage(document, profile, createdPage.id, createdPage.lastEditedTime),
 		);
-		summary.createdLocalDocuments += 1;
+		summary.createdRemotePages += 1;
+		return summary;
 	}
 
+	const remotePage = remotePagesById.get(pageId);
+	if (!remotePage) {
+		summary.skipped += 1;
+		return summary;
+	}
+
+	if (shouldPushLocalChanges(document, remotePage, profile, snapshot.schema)) {
+		await options.notionRepository.updatePage({
+			markdown: document.content,
+			pageId,
+			properties,
+			title: document.title,
+			titleProperty: profile.titleProperty,
+		});
+		summary.updatedRemotePages += 1;
+		return summary;
+	}
+
+	if (shouldPullRemoteChanges(document, remotePage, profile, snapshot.schema)) {
+		await options.localRepository.upsertDocument(
+			mergeRemoteIntoLocalDocument(document, remotePage, profile),
+		);
+		summary.updatedLocalDocuments += 1;
+		return summary;
+	}
+
+	summary.skipped += 1;
 	return summary;
-}
-
-function buildImportedDocumentPath(
-	folder: string,
-	title: string,
-	knownPaths: Set<string>,
-): string {
-	const baseName = sanitizeImportedFileName(title);
-	let path = `${folder}/${baseName}.md`;
-	let counter = 2;
-
-	while (knownPaths.has(path)) {
-		path = `${folder}/${baseName}-${counter}.md`;
-		counter += 1;
-	}
-
-	return path;
 }
 
 function buildRemotePayload(
@@ -206,27 +161,6 @@ function createEmptySummary(): SyncSummary {
 	};
 }
 
-function createLocalDocumentFromRemotePage(
-	path: string,
-	profile: DatabaseSyncSetting,
-	page: NotionPage,
-): LocalDocument {
-	return {
-		content: page.markdown,
-		frontmatter: {
-			...extractObsidianProperties({
-				mappings: profile.propertyMappings,
-				notionProperties: page.properties,
-				syncDirection: "notion-to-obsidian",
-			}),
-			[profile.notionPageIdField]: page.id,
-		},
-		lastEditedTime: page.lastEditedTime,
-		path,
-		title: page.title,
-	};
-}
-
 function getComparableLocalState(
 	document: LocalDocument,
 	profile: DatabaseSyncSetting,
@@ -250,7 +184,6 @@ function getComparableLocalState(
 function getComparableRemoteState(
 	page: NotionPage,
 	profile: DatabaseSyncSetting,
-	schema: Record<string, string>,
 ): Record<string, unknown> {
 	const frontmatter = extractObsidianProperties({
 		mappings: profile.propertyMappings,
@@ -323,15 +256,8 @@ function mergeRemoteIntoLocalDocument(
 			[profile.notionPageIdField]: page.id,
 		},
 		lastEditedTime: page.lastEditedTime,
+		title: page.title,
 	};
-}
-
-function mergeSummary(target: SyncSummary, source: SyncSummary): void {
-	target.createdLocalDocuments += source.createdLocalDocuments;
-	target.createdRemotePages += source.createdRemotePages;
-	target.skipped += source.skipped;
-	target.updatedLocalDocuments += source.updatedLocalDocuments;
-	target.updatedRemotePages += source.updatedRemotePages;
 }
 
 function normalizeComparableRemoteValue(type: string, value: unknown): unknown {
@@ -365,15 +291,13 @@ function shouldPullRemoteChanges(
 		return false;
 	}
 
+	const remoteState = getComparableRemoteState(page, profile);
 	return (
 		document.content !== page.markdown
 		|| hasDifferentMappedProperties(
-			getComparableRemoteState(page, profile, schema),
+			remoteState,
 			Object.fromEntries(
-				Object.entries(getComparableRemoteState(page, profile, schema)).map(([key]) => [
-					key,
-					document.frontmatter[key],
-				]),
+				Object.keys(remoteState).map((key) => [key, document.frontmatter[key]]),
 			),
 		)
 	);
@@ -389,15 +313,13 @@ function shouldPushLocalChanges(
 		return false;
 	}
 
+	const localState = getComparableLocalState(document, profile, schema);
 	return (
 		document.content !== page.markdown
 		|| hasDifferentMappedProperties(
-			getComparableLocalState(document, profile, schema),
+			localState,
 			Object.fromEntries(
-				Object.entries(getComparableLocalState(document, profile, schema)).map(([name]) => [
-					name,
-					page.properties[name]?.value,
-				]),
+				Object.keys(localState).map((name) => [name, page.properties[name]?.value]),
 			),
 		)
 	);
@@ -405,20 +327,4 @@ function shouldPushLocalChanges(
 
 function compareTimestamps(left: string, right: string): number {
 	return left.localeCompare(right);
-}
-
-function sanitizeImportedFileName(value: string): string {
-	const sanitized = Array.from(value.trim())
-		.map((character) => isInvalidFileNameCharacter(character) ? " " : character)
-		.join("")
-		.trim()
-		.replace(/\s+/g, " ")
-		.replace(/\.+$/g, "")
-		.trim();
-
-	return sanitized || "Untitled";
-}
-
-function isInvalidFileNameCharacter(character: string): boolean {
-	return character <= "\u001f" || "\\/:*?\"<>|".includes(character);
 }

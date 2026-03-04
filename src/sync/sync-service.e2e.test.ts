@@ -14,10 +14,9 @@ import { SyncService } from "./sync-service";
 class MemoryLocalRepository implements LocalDocumentRepository {
 	constructor(private readonly documents: LocalDocument[]) {}
 
-	async listDocuments(folder: string): Promise<LocalDocument[]> {
-		return this.documents
-			.filter((document) => document.path.startsWith(`${folder}/`))
-			.map((document) => structuredClone(document));
+	async readDocument(path: string): Promise<LocalDocument | null> {
+		const document = this.documents.find((entry) => entry.path === path);
+		return document ? structuredClone(document) : null;
 	}
 
 	async upsertDocument(document: LocalDocument): Promise<void> {
@@ -129,8 +128,6 @@ function createProfile(
 	return {
 		...createDefaultDatabaseConfig("Tasks"),
 		databaseId: "db-1",
-		enabled: true,
-		folder: "Tasks",
 		propertyMappings: [{
 			direction: "bidirectional",
 			notionProperty: "Status",
@@ -144,19 +141,27 @@ function createSettings(profiles: DatabaseSyncSetting[]): NotionSyncPluginSettin
 	return normalizeSettings({
 		databases: profiles,
 		notionToken: "secret_test",
-		syncOnStartup: true,
 	});
 }
 
 describe("SyncService", () => {
-	it("runs full and incremental sync flows across configured databases", async () => {
-		const localRepository = new MemoryLocalRepository([{
-			content: "# Local launch",
-			frontmatter: { status: "Todo" },
-			lastEditedTime: "2026-03-04T10:00:00.000Z",
-			path: "Tasks/launch.md",
-			title: "Launch",
-		}]);
+	it("syncs only the selected database for the requested file", async () => {
+		const localRepository = new MemoryLocalRepository([
+			{
+				content: "# Local launch",
+				frontmatter: { status: "Todo" },
+				lastEditedTime: "2026-03-04T10:00:00.000Z",
+				path: "Tasks/launch.md",
+				title: "Launch",
+			},
+			{
+				content: "# Local note",
+				frontmatter: { status: "Draft" },
+				lastEditedTime: "2026-03-04T10:00:00.000Z",
+				path: "Notes/remote.md",
+				title: "Remote",
+			},
+		]);
 		const notionRepository = new MemoryNotionRepository({
 			"db-1": {
 				databaseId: "db-1",
@@ -173,10 +178,10 @@ describe("SyncService", () => {
 					lastEditedTime: "2026-03-04T10:10:00.000Z",
 					markdown: "# Remote note",
 					properties: {
-						Name: { type: "title", value: "Remote note" },
-						Status: { type: "status", value: "Draft" },
+						Name: { type: "title", value: "Remote" },
+						Status: { type: "status", value: "Published" },
 					},
-					title: "Remote note",
+					title: "Remote",
 				}],
 				schema: {
 					Name: "title",
@@ -184,47 +189,43 @@ describe("SyncService", () => {
 				},
 			},
 		});
-		let now = Date.parse("2026-03-04T10:20:00.000Z");
 		const service = new SyncService({
 			getSettings: () => createSettings([
-				createProfile({ syncIntervalSeconds: 60 }),
-				createProfile({
-					databaseId: "db-2",
-					folder: "Notes",
-					name: "Notes",
-					syncIntervalSeconds: 120,
-				}),
+				createProfile({ id: "tasks", name: "Tasks" }),
+				createProfile({ databaseId: "db-2", id: "notes", name: "Notes" }),
 			]),
 			localRepository,
 			notionRepository,
-			now: () => now,
 		});
 
-		const fullSummary = await service.syncAll();
+		const createdSummary = await service.syncFile("Tasks/launch.md", "tasks");
 
-		expect(fullSummary.createdRemotePages).toBe(1);
-		expect(fullSummary.createdLocalDocuments).toBe(1);
+		expect(createdSummary).toEqual({
+			createdLocalDocuments: 0,
+			createdRemotePages: 1,
+			skipped: 0,
+			updatedLocalDocuments: 0,
+			updatedRemotePages: 0,
+		});
 		expect(localRepository.read("Tasks/launch.md")?.frontmatter.notionPageId).toBe("page-1");
-		expect(localRepository.read("Notes/Remote note.md")?.content).toBe("# Remote note");
+		expect(localRepository.read("Notes/remote.md")?.content).toBe("# Local note");
 
+		localRepository.read("Notes/remote.md")!.frontmatter.notionPageId = "page-remote";
 		notionRepository.updateRemotePage(
-			"db-1",
-			"page-1",
-			"# Remote launch",
-			"2026-03-04T10:30:00.000Z",
+			"db-2",
+			"page-remote",
+			"# Remote revision",
+			"2026-03-04T10:20:00.000Z",
 		);
-		now = Date.parse("2026-03-04T10:31:30.000Z");
 
-		const pollSummary = await service.syncDueProfiles();
+		const pulledSummary = await service.syncFile("Notes/remote.md", "notes");
 
-		expect(pollSummary.updatedLocalDocuments).toBe(1);
-		expect(localRepository.read("Tasks/launch.md")?.content).toBe("# Remote launch");
-
-		const unmatchedSummary = await service.syncFile("Inbox/random.md");
-		expect(unmatchedSummary).toBeNull();
+		expect(pulledSummary?.updatedLocalDocuments).toBe(1);
+		expect(localRepository.read("Notes/remote.md")?.content).toBe("# Remote revision");
+		expect(localRepository.read("Tasks/launch.md")?.content).toBe("# Local launch");
 	});
 
-	it("skips work when the integration token is missing or polls are not due", async () => {
+	it("returns null when the token, database, or file is unavailable", async () => {
 		const localRepository = new MemoryLocalRepository([]);
 		const notionRepository = new MemoryNotionRepository({
 			"db-1": {
@@ -235,45 +236,26 @@ describe("SyncService", () => {
 				},
 			},
 		});
-		let now = Date.parse("2026-03-04T10:20:00.000Z");
 		const service = new SyncService({
 			getSettings: () => createSettings([
 				createProfile({
-					syncIntervalSeconds: 120,
+					id: "tasks",
 				}),
 			]),
 			localRepository,
 			notionRepository,
-			now: () => now,
 		});
 		const withoutToken = new SyncService({
 			getSettings: () => ({
-				...createSettings([createProfile({})]),
+				...createSettings([createProfile({ id: "tasks" })]),
 				notionToken: "",
 			}),
 			localRepository,
 			notionRepository,
-			now: () => now,
 		});
 
-		expect(await withoutToken.syncAll()).toEqual({
-			createdLocalDocuments: 0,
-			createdRemotePages: 0,
-			skipped: 0,
-			updatedLocalDocuments: 0,
-			updatedRemotePages: 0,
-		});
-		expect(await withoutToken.syncFile("Tasks/launch.md")).toBeNull();
-
-		await service.syncAll();
-		now = Date.parse("2026-03-04T10:21:00.000Z");
-
-		expect(await service.syncDueProfiles()).toEqual({
-			createdLocalDocuments: 0,
-			createdRemotePages: 0,
-			skipped: 0,
-			updatedLocalDocuments: 0,
-			updatedRemotePages: 0,
-		});
+		await expect(service.syncFile("Tasks/missing.md", "tasks")).resolves.toBeNull();
+		await expect(service.syncFile("Tasks/launch.md", "missing")).resolves.toBeNull();
+		await expect(withoutToken.syncFile("Tasks/launch.md", "tasks")).resolves.toBeNull();
 	});
 });
