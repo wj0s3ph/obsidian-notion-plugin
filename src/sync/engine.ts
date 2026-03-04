@@ -160,7 +160,7 @@ function buildImportedDocumentPath(
 	title: string,
 	knownPaths: Set<string>,
 ): string {
-	const baseName = slugify(title);
+	const baseName = sanitizeImportedFileName(title);
 	let path = `${folder}/${baseName}.md`;
 	let counter = 2;
 
@@ -407,12 +407,13 @@ function compareTimestamps(left: string, right: string): number {
 	return left.localeCompare(right);
 }
 
-function slugify(value: string): string {
-	const slug = value
-		.toLowerCase()
+function sanitizeImportedFileName(value: string): string {
+	const sanitized = value
 		.trim()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "");
+		.replace(/[\u0000-\u001f\\/:*?"<>|]+/g, " ")
+		.replace(/\s+/g, " ")
+		.replace(/\.+$/g, "")
+		.trim();
 
-	return slug || "untitled";
+	return sanitized || "Untitled";
 }

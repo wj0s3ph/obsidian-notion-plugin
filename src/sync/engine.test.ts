@@ -531,12 +531,12 @@ describe("syncDatabaseProfiles", () => {
 		expect(taskDocument).toBeDefined();
 		expect(taskDocument).toMatchObject({
 			content: "# Remote task",
-			path: "Tasks/remote-task.md",
+			path: "Tasks/Remote task.md",
 		});
 		expect(noteDocument).toBeDefined();
 		expect(noteDocument).toMatchObject({
 			content: "# Remote note",
-			path: "Notes/remote-note.md",
+			path: "Notes/Remote note.md",
 		});
 	});
 
@@ -591,8 +591,8 @@ describe("syncDatabaseProfiles", () => {
 				status: "Todo",
 			},
 			lastEditedTime: "2026-03-04T10:00:00.000Z",
-			path: "Tasks/remote-task.md",
-			title: "remote-task",
+			path: "Tasks/Remote task.md",
+			title: "Remote task",
 		}]);
 		const notion = new InMemoryNotionRepository({
 			"db-1": {
@@ -631,7 +631,7 @@ describe("syncDatabaseProfiles", () => {
 			notionRepository: notion,
 		});
 
-		expect(local.getDocument("Tasks/remote-task-2.md")).toMatchObject({
+		expect(local.getDocument("Tasks/Remote task-2.md")).toMatchObject({
 			content: "# Remote task",
 			frontmatter: {
 				notionPageId: "page-1",
@@ -640,7 +640,7 @@ describe("syncDatabaseProfiles", () => {
 		});
 	});
 
-	it("falls back to an untitled file name when the remote title has no slug characters", async () => {
+	it("falls back to an Untitled file name when the remote title has no valid file name characters", async () => {
 		const profile = createProfile({});
 		const local = new InMemoryLocalRepository([]);
 		const notion = new InMemoryNotionRepository({
@@ -651,10 +651,10 @@ describe("syncDatabaseProfiles", () => {
 					lastEditedTime: "2026-03-04T10:20:00.000Z",
 					markdown: "# Remote task",
 					properties: {
-						Name: { type: "title", value: "!!!" },
+						Name: { type: "title", value: "///" },
 						Status: { type: "status", value: "Todo" },
 					},
-					title: "!!!",
+					title: "///",
 				}],
 				schema: {
 					Name: "title",
@@ -668,7 +668,7 @@ describe("syncDatabaseProfiles", () => {
 			notionRepository: notion,
 		});
 
-		expect(local.getDocument("Tasks/untitled.md")).toMatchObject({
+		expect(local.getDocument("Tasks/Untitled.md")).toMatchObject({
 			content: "# Remote task",
 		});
 	});
