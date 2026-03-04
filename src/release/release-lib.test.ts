@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { getReleaseAssetNames, RELEASE_DIR, validateReleaseManifest } from "../../scripts/release-lib.mjs";
+import {
+	getReleaseArchiveName,
+	getReleaseAssetNames,
+	RELEASE_DIR,
+	validateReleaseManifest,
+} from "../../scripts/release-lib.mjs";
 
 describe("release-lib", () => {
 	it("returns the GitHub release asset list with optional styles", () => {
@@ -14,6 +19,13 @@ describe("release-lib", () => {
 			"manifest.json",
 		]);
 		expect(RELEASE_DIR).toBe("release");
+	});
+
+	it("builds a versioned zip archive name for release assets", () => {
+		expect(getReleaseArchiveName({
+			id: "obsidian-notion-plugin",
+			version: "1.0.0",
+		})).toBe("obsidian-notion-plugin-1.0.0.zip");
 	});
 
 	it("validates manifest release metadata", () => {

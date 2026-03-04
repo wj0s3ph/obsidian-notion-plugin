@@ -100,6 +100,7 @@ Release assets are:
 - `main.js`
 - `manifest.json`
 - `styles.css`
+- `<plugin-id>-<version>.zip`
 
 Build them with:
 
@@ -211,6 +212,7 @@ Release 资产包括：
 - `main.js`
 - `manifest.json`
 - `styles.css`
+- `<插件 ID>-<版本号>.zip`
 
 构建命令：
 

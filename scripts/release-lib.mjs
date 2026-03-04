@@ -13,6 +13,14 @@ export function getReleaseAssetNames({ hasStyles }) {
 }
 
 /**
+ * @param {{ id: string; version: string }} manifest
+ * @returns {string}
+ */
+export function getReleaseArchiveName(manifest) {
+	return `${manifest.id}-${manifest.version}.zip`;
+}
+
+/**
  * @param {unknown} manifest
  * @returns {{ id: string; version: string }}
  */

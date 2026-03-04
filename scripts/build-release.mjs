@@ -2,7 +2,12 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 
-import { getReleaseAssetNames, RELEASE_DIR, validateReleaseManifest } from "./release-lib.mjs";
+import {
+	getReleaseArchiveName,
+	getReleaseAssetNames,
+	RELEASE_DIR,
+	validateReleaseManifest,
+} from "./release-lib.mjs";
 
 const rootDir = process.cwd();
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
@@ -31,4 +36,32 @@ for (const assetName of assetNames) {
 	copyFileSync(sourcePath, path.join(releaseDir, assetName));
 }
 
+const archiveName = getReleaseArchiveName(manifest);
+createReleaseArchive({
+	archiveName,
+	assetNames,
+	releaseDir,
+});
+
 console.log(`Prepared GitHub release assets for ${manifest.id}@${manifest.version} in ${RELEASE_DIR}/`);
+
+/**
+ * @param {{ archiveName: string; assetNames: string[]; releaseDir: string }} options
+ * @returns {void}
+ */
+function createReleaseArchive({ archiveName, assetNames, releaseDir }) {
+	if (process.platform === "win32") {
+		const quotedAssets = assetNames.map((assetName) => `'${assetName}'`).join(", ");
+		const command = `Compress-Archive -Path ${quotedAssets} -DestinationPath '${archiveName}' -Force`;
+		execFileSync("powershell.exe", ["-NoLogo", "-NoProfile", "-Command", command], {
+			cwd: releaseDir,
+			stdio: "inherit",
+		});
+		return;
+	}
+
+	execFileSync("zip", ["-q", archiveName, ...assetNames], {
+		cwd: releaseDir,
+		stdio: "inherit",
+	});
+}
