@@ -282,4 +282,63 @@ describe("SyncService", () => {
 			status: "skipped",
 		});
 	});
+
+	it("pulls the selected remote page into the requested file", async () => {
+		const localRepository = new MemoryLocalRepository([{
+			content: "# Local note",
+			frontmatter: {
+				notionPageId: "page-remote",
+				status: "Draft",
+			},
+			lastEditedTime: "2026-03-04T10:30:00.000Z",
+			path: "Notes/remote.md",
+			title: "Remote",
+		}]);
+		const notionRepository = new MemoryNotionRepository({
+			"db-2": {
+				databaseId: "db-2",
+				pages: [{
+					id: "page-remote",
+					lastEditedTime: "2026-03-04T10:10:00.000Z",
+					markdown: "# Remote source",
+					properties: {
+						Name: { type: "title", value: "Remote" },
+						Status: { type: "status", value: "Published" },
+					},
+					title: "Remote",
+				}],
+				schema: {
+					Name: "title",
+					Status: "status",
+				},
+			},
+		});
+		const service = new SyncService({
+			getSettings: () => createSettings([
+				createProfile({ databaseId: "db-2", id: "notes", name: "Notes" }),
+			]),
+			localRepository,
+			notionRepository,
+		});
+
+		const result = await service.pullFile("Notes/remote.md", "notes");
+
+		expect(result).toEqual({
+			status: "success",
+			summary: {
+				createdLocalDocuments: 0,
+				createdRemotePages: 0,
+				skipped: 0,
+				updatedLocalDocuments: 1,
+				updatedRemotePages: 0,
+			},
+		});
+		expect(localRepository.read("Notes/remote.md")).toMatchObject({
+			content: "# Remote source",
+			frontmatter: {
+				notionPageId: "page-remote",
+				status: "Published",
+			},
+		});
+	});
 });

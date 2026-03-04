@@ -166,6 +166,7 @@ class TestPlugin extends NotionSyncPlugin {
 	};
 
 	syncFile = vi.fn(async () => this.syncResult);
+	pullFile = vi.fn(async () => this.syncResult);
 	saveSettingsMock = vi.fn(async () => undefined);
 
 	protected override async chooseDatabase(_databases: DatabaseSyncSetting[]) {
@@ -174,6 +175,7 @@ class TestPlugin extends NotionSyncPlugin {
 
 	protected override createSyncService() {
 		return {
+			pullFile: this.pullFile,
 			syncFile: this.syncFile,
 		} as never;
 	}
@@ -214,7 +216,7 @@ describe("NotionSyncPlugin", () => {
 
 		await plugin.onload();
 
-		expect(addCommand).toHaveBeenCalledTimes(1);
+		expect(addCommand).toHaveBeenCalledTimes(2);
 		expect(addRibbonIcon).toHaveBeenCalledTimes(1);
 		expect(addSettingTab).toHaveBeenCalledTimes(1);
 		expect(registerEvent).not.toHaveBeenCalled();
@@ -309,5 +311,22 @@ describe("NotionSyncPlugin", () => {
 		await expect(plugin.fetchDatabaseProperties("tasks")).resolves.toEqual(["Name", "Published", "Slug"]);
 		expect(plugin.settings.databases[0]?.notionProperties).toEqual(["Name", "Published", "Slug"]);
 		expect(plugin.saveSettingsMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("pulls the active note from Notion into the local file", async () => {
+		const plugin = new TestPlugin({
+			workspace: {
+				getActiveFile: () => ({
+					extension: "md",
+					path: "Tasks/launch.md",
+				}),
+			},
+			vault: {},
+		});
+
+		await plugin.onload();
+		await plugin.pullActiveFileFromNotion(true);
+
+		expect(plugin.pullFile).toHaveBeenCalledWith("Tasks/launch.md", "tasks");
 	});
 });

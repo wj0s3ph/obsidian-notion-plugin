@@ -19,6 +19,23 @@ export function registerCommands(plugin: NotionSyncPlugin): void {
 			return true;
 		},
 	});
+
+	plugin.addCommand({
+		id: "pull-active-note-from-notion",
+		name: "Pull active note from Notion",
+		checkCallback: (checking) => {
+			const file = plugin.app.workspace.getActiveFile();
+			if (!isMarkdownFile(file)) {
+				return false;
+			}
+
+			if (!checking) {
+				void plugin.pullActiveFileFromNotion(true);
+			}
+
+			return true;
+		},
+	});
 }
 
 function isMarkdownFile(file: TFile | null): file is TFile {

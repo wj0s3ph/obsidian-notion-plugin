@@ -242,4 +242,32 @@ describe("NotionSyncSettingTab", () => {
 
 		expect(fetchDatabaseProperties).toHaveBeenCalledWith("tasks");
 	});
+
+	it("does not render a sync direction selector for property mappings", () => {
+		const profile = {
+			...createDefaultDatabaseConfig("Tasks"),
+			databaseId: "db-1",
+			id: "tasks",
+			notionProperties: ["Published"],
+			propertyMappings: [{
+				direction: "bidirectional" as const,
+				notionProperty: "Published",
+				obsidianKey: "published",
+			}],
+		};
+		const tab = new NotionSyncSettingTab({} as never, {
+			fetchDatabaseProperties: vi.fn(async () => ["Published"]),
+			saveSettings: vi.fn(async () => undefined),
+			settings: {
+				databases: [profile],
+				notionToken: "secret_test",
+			},
+		});
+
+		tab.display();
+
+		expect(tab.containerEl.textContent).not.toContain("Bidirectional");
+		expect(tab.containerEl.textContent).not.toContain("Obsidian -> Notion");
+		expect(tab.containerEl.textContent).not.toContain("Notion -> Obsidian");
+	});
 });

@@ -65,6 +65,17 @@ export default class NotionSyncPlugin extends Plugin {
 	}
 
 	async syncActiveFile(notify: boolean): Promise<SyncSummary | null> {
+		return this.runActiveFileAction(notify, (path, databaseId) => this.syncService?.syncFile(path, databaseId));
+	}
+
+	async pullActiveFileFromNotion(notify: boolean): Promise<SyncSummary | null> {
+		return this.runActiveFileAction(notify, (path, databaseId) => this.syncService?.pullFile(path, databaseId));
+	}
+
+	private async runActiveFileAction(
+		notify: boolean,
+		execute: (path: string, databaseId: string) => Promise<{ status: "success"; summary: SyncSummary; } | { status: "skipped"; message: string; reason: string; } | undefined> | undefined,
+	): Promise<SyncSummary | null> {
 		if (!this.ensureTokenConfigured(notify) || !this.syncService) {
 			return null;
 		}
@@ -91,7 +102,10 @@ export default class NotionSyncPlugin extends Plugin {
 				return null;
 			}
 
-			const result = await this.syncService.syncFile(file.path, database.id);
+			const result = await execute(file.path, database.id);
+			if (!result) {
+				return null;
+			}
 			if (result.status !== "success") {
 				if (notify) {
 					new Notice(result.message);

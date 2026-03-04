@@ -9,7 +9,7 @@ import type {
 	NotionPage,
 	NotionRepository,
 } from "./engine";
-import { syncDatabaseFile } from "./engine";
+import { pullRemoteDatabaseFile, syncDatabaseFile } from "./engine";
 
 class InMemoryLocalRepository implements LocalDocumentRepository {
 	constructor(private readonly documents: LocalDocument[]) {}
@@ -427,6 +427,59 @@ describe("syncDatabaseFile", () => {
 			skipped: 1,
 			updatedLocalDocuments: 0,
 			updatedRemotePages: 0,
+		});
+	});
+
+	it("pulls the linked remote page into the local note on demand", async () => {
+		const profile = createProfile({});
+		const local = new InMemoryLocalRepository([{
+			content: "# Local draft",
+			frontmatter: {
+				notionPageId: "page-1",
+				status: "Todo",
+			},
+			lastEditedTime: "2026-03-04T10:20:00.000Z",
+			path: "Tasks/launch.md",
+			title: "Launch",
+		}]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [{
+					id: "page-1",
+					lastEditedTime: "2026-03-04T10:10:00.000Z",
+					markdown: "# Remote source",
+					properties: {
+						Name: { type: "title", value: "Launch" },
+						Status: { type: "status", value: "Published" },
+					},
+					title: "Launch",
+				}],
+				schema: {
+					Name: "title",
+					Status: "status",
+				},
+			},
+		});
+
+		const summary = await pullRemoteDatabaseFile(profile, "Tasks/launch.md", {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(summary).toEqual({
+			createdLocalDocuments: 0,
+			createdRemotePages: 0,
+			skipped: 0,
+			updatedLocalDocuments: 1,
+			updatedRemotePages: 0,
+		});
+		expect(local.getDocument("Tasks/launch.md")).toMatchObject({
+			content: "# Remote source",
+			frontmatter: {
+				notionPageId: "page-1",
+				status: "Published",
+			},
 		});
 	});
 });

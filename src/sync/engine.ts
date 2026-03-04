@@ -130,6 +130,43 @@ export async function syncDatabaseFile(
 	return summary;
 }
 
+export async function pullRemoteDatabaseFile(
+	profile: DatabaseSyncSetting,
+	path: string,
+	options: SyncDatabaseFileOptions,
+): Promise<SyncSummary> {
+	const summary = createEmptySummary();
+	if (!profile.databaseId.trim()) {
+		summary.skipped += 1;
+		return summary;
+	}
+
+	const document = await options.localRepository.readDocument(path);
+	if (!document) {
+		summary.skipped += 1;
+		return summary;
+	}
+
+	const pageId = getLinkedPageId(document, profile);
+	if (!pageId) {
+		summary.skipped += 1;
+		return summary;
+	}
+
+	const snapshot = await options.notionRepository.getDatabaseSnapshot(profile.databaseId);
+	const remotePage = snapshot.pages.find((page) => page.id === pageId);
+	if (!remotePage) {
+		summary.skipped += 1;
+		return summary;
+	}
+
+	await options.localRepository.upsertDocument(
+		mergeRemoteIntoLocalDocument(document, remotePage, profile),
+	);
+	summary.updatedLocalDocuments += 1;
+	return summary;
+}
+
 function buildRemotePayload(
 	document: LocalDocument,
 	profile: DatabaseSyncSetting,

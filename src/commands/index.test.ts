@@ -9,8 +9,9 @@ interface RegisteredCommand {
 }
 
 describe("registerCommands", () => {
-	it("registers a single manual sync command for the active markdown note", async () => {
+	it("registers manual sync commands for pushing and pulling the active markdown note", async () => {
 		const syncActiveFile = vi.fn(async () => undefined);
+		const pullActiveFileFromNotion = vi.fn(async () => undefined);
 		const addCommand = vi.fn();
 		const plugin = {
 			addCommand,
@@ -23,19 +24,26 @@ describe("registerCommands", () => {
 				},
 			},
 			syncActiveFile,
+			pullActiveFileFromNotion,
 		};
 
 		registerCommands(plugin as never);
 
-		expect(addCommand).toHaveBeenCalledTimes(1);
-		const [command] = (addCommand.mock.calls[0] ?? []) as [RegisteredCommand];
-		expect(command.id).toBe("sync-active-note-database");
-		expect(command.name).toBe("Sync active note database");
-		expect(command.checkCallback(true)).toBe(true);
+		expect(addCommand).toHaveBeenCalledTimes(2);
+		const [syncCommand] = (addCommand.mock.calls[0] ?? []) as [RegisteredCommand];
+		const [pullCommand] = (addCommand.mock.calls[1] ?? []) as [RegisteredCommand];
+		expect(syncCommand.id).toBe("sync-active-note-database");
+		expect(syncCommand.name).toBe("Sync active note database");
+		expect(syncCommand.checkCallback(true)).toBe(true);
+		expect(pullCommand.id).toBe("pull-active-note-from-notion");
+		expect(pullCommand.name).toBe("Pull active note from Notion");
+		expect(pullCommand.checkCallback(true)).toBe(true);
 
-		command.checkCallback(false);
+		syncCommand.checkCallback(false);
+		pullCommand.checkCallback(false);
 
 		expect(syncActiveFile).toHaveBeenCalledWith(true);
+		expect(pullActiveFileFromNotion).toHaveBeenCalledWith(true);
 	});
 
 	it("disables the command when the active file is not markdown", () => {
@@ -52,7 +60,9 @@ describe("registerCommands", () => {
 
 		registerCommands(plugin as never);
 
-		const [command] = (addCommand.mock.calls[0] ?? []) as [RegisteredCommand];
-		expect(command.checkCallback(true)).toBe(false);
+		const [syncCommand] = (addCommand.mock.calls[0] ?? []) as [RegisteredCommand];
+		const [pullCommand] = (addCommand.mock.calls[1] ?? []) as [RegisteredCommand];
+		expect(syncCommand.checkCallback(true)).toBe(false);
+		expect(pullCommand.checkCallback(true)).toBe(false);
 	});
 });

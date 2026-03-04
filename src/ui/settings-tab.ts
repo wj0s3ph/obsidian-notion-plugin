@@ -168,15 +168,6 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 				})
-				.addDropdown((dropdown) => dropdown
-					.addOption("bidirectional", "Bidirectional")
-					.addOption("obsidian-to-notion", "Obsidian -> Notion")
-					.addOption("notion-to-obsidian", "Notion -> Obsidian")
-					.setValue(mapping.direction)
-					.onChange(async (value) => {
-						mapping.direction = value as DatabaseSyncSetting["propertyMappings"][number]["direction"];
-						await this.plugin.saveSettings();
-					}))
 				.addExtraButton((button) => button
 					.setIcon("trash")
 					.setTooltip("Remove mapping")
