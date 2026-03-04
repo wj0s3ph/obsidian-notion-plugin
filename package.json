@@ -31,6 +31,7 @@
 	},
 	"dependencies": {
 		"@notionhq/client": "^5.11.1",
-		"obsidian": "latest"
+		"obsidian": "latest",
+		"yaml": "^2.8.2"
 	}
 }
