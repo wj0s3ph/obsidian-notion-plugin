@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
 	DEFAULT_SETTINGS,
+	coercePersistedSettings,
 	createDefaultDatabaseConfig,
 	normalizeSettings,
 } from "./settings";
@@ -94,5 +95,22 @@ describe("normalizeSettings", () => {
 
 		expect(second).toEqual(DEFAULT_SETTINGS);
 		expect(second.databases).toEqual([]);
+	});
+});
+
+describe("coercePersistedSettings", () => {
+	it("drops non-object values before they reach normalizeSettings", () => {
+		expect(coercePersistedSettings("invalid")).toBeUndefined();
+		expect(coercePersistedSettings(42)).toBeUndefined();
+		expect(coercePersistedSettings(null)).toBeUndefined();
+		expect(coercePersistedSettings({
+			databases: [],
+			notionToken: "secret_123",
+			syncOnStartup: true,
+		})).toEqual({
+			databases: [],
+			notionToken: "secret_123",
+			syncOnStartup: true,
+		});
 	});
 });

@@ -16,7 +16,7 @@ export function parseMarkdownDocument(markdown: string): MarkdownDocument {
 		};
 	}
 
-	const frontmatter = YAML.parse(match[1] ?? "");
+	const frontmatter: unknown = YAML.parse(match[1] ?? "");
 	return {
 		content: markdown.slice(match[0].length),
 		frontmatter: isRecord(frontmatter) ? frontmatter : {},

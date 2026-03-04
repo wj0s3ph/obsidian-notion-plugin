@@ -4,6 +4,7 @@ import { registerCommands } from "./commands";
 import { createNotionClientFactory, NotionApiRepository } from "./notion/notion-api-repository";
 import { VaultDocumentRepository } from "./obsidian/vault-document-repository";
 import {
+	coercePersistedSettings,
 	DEFAULT_SETTINGS,
 	type NotionSyncPluginSettings,
 	normalizeSettings,
@@ -51,7 +52,8 @@ export default class NotionSyncPlugin extends Plugin {
 	}
 
 	async loadSettings(): Promise<void> {
-		this.settings = normalizeSettings(await this.loadData());
+		const persistedSettings: unknown = await this.loadData();
+		this.settings = normalizeSettings(coercePersistedSettings(persistedSettings));
 	}
 
 	async saveSettings(): Promise<void> {

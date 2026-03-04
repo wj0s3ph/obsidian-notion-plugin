@@ -408,12 +408,17 @@ function compareTimestamps(left: string, right: string): number {
 }
 
 function sanitizeImportedFileName(value: string): string {
-	const sanitized = value
+	const sanitized = Array.from(value.trim())
+		.map((character) => isInvalidFileNameCharacter(character) ? " " : character)
+		.join("")
 		.trim()
-		.replace(/[\u0000-\u001f\\/:*?"<>|]+/g, " ")
 		.replace(/\s+/g, " ")
 		.replace(/\.+$/g, "")
 		.trim();
 
 	return sanitized || "Untitled";
+}
+
+function isInvalidFileNameCharacter(character: string): boolean {
+	return character <= "\u001f" || "\\/:*?\"<>|".includes(character);
 }

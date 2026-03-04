@@ -195,22 +195,19 @@ function extractRichText(value: unknown): string {
 
 	return value
 		.map((item) => {
-			if (typeof item !== "object" || item === null) {
+			if (!isRecord(item)) {
 				return "";
 			}
 
-			if ("plain_text" in item && typeof item.plain_text === "string") {
-				return item.plain_text;
+			const plainText = getStringProperty(item, "plain_text");
+			if (plainText !== undefined) {
+				return plainText;
 			}
 
-			if (
-				"text" in item
-				&& typeof item.text === "object"
-				&& item.text !== null
-				&& "content" in item.text
-				&& typeof item.text.content === "string"
-			) {
-				return item.text.content;
+			const text = getRecordProperty(item, "text");
+			const content = text ? getStringProperty(text, "content") : undefined;
+			if (content !== undefined) {
+				return content;
 			}
 
 			return "";
@@ -275,11 +272,7 @@ function normalizePropertyValue(type: string, property: unknown): unknown {
 		case "multi_select":
 			return "multi_select" in record && Array.isArray(record.multi_select)
 				? record.multi_select
-					.map((option) =>
-						typeof option === "object" && option !== null && "name" in option
-							? option.name
-							: null,
-					)
+					.map((option) => getStringProperty(option, "name") ?? null)
 					.filter((option): option is string => typeof option === "string")
 				: [];
 		case "number":
@@ -289,11 +282,7 @@ function normalizePropertyValue(type: string, property: unknown): unknown {
 		case "select":
 		case "status":
 			return type in record
-				&& typeof record[type] === "object"
-				&& record[type] !== null
-				&& "name" in (record[type] as Record<string, unknown>)
-				&& typeof (record[type] as Record<string, unknown>).name === "string"
-				? (record[type] as Record<string, unknown>).name
+				? getStringProperty(record[type], "name") ?? null
 				: null;
 		case "title":
 			return "title" in record ? extractRichText(record.title) : "";
@@ -315,6 +304,28 @@ function normalizeDatePropertyValue(value: unknown): string | { start: string; e
 
 	const end = "end" in value && typeof value.end === "string" ? value.end : undefined;
 	return end ? { end, start: value.start } : value.start;
+}
+
+function getRecordProperty(value: unknown, key: string): Record<string, unknown> | undefined {
+	if (!isRecord(value) || !(key in value)) {
+		return undefined;
+	}
+
+	const propertyValue = value[key];
+	return isRecord(propertyValue) ? propertyValue : undefined;
+}
+
+function getStringProperty(value: unknown, key: string): string | undefined {
+	if (!isRecord(value) || !(key in value)) {
+		return undefined;
+	}
+
+	const propertyValue = value[key];
+	return typeof propertyValue === "string" ? propertyValue : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
 }
 
 interface PageLike {

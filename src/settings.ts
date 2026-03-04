@@ -85,6 +85,10 @@ export function normalizeSettings(
 	};
 }
 
+export function coercePersistedSettings(value: unknown): PersistedPluginSettings | undefined {
+	return isRecord(value) ? value as PersistedPluginSettings : undefined;
+}
+
 function createConfigId(): string {
 	return `database-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -141,4 +145,8 @@ function normalizePropertyMappings(
 				obsidianKey,
 			}];
 		});
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
 }

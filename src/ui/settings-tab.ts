@@ -20,9 +20,9 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", {
-			text: "Notion database sync",
-		});
+		new Setting(containerEl)
+			.setName("Integration")
+			.setHeading();
 
 		new Setting(containerEl)
 			.setName("Integration token")
@@ -30,7 +30,7 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 			.addText((text) => {
 				text.inputEl.type = "password";
 				text
-					.setPlaceholder("secret_...")
+					.setPlaceholder("Secret token")
 					.setValue(this.plugin.settings.notionToken)
 					.onChange(async (value) => {
 						this.plugin.settings.notionToken = value.trim();
@@ -48,9 +48,9 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl("h3", {
-			text: "Database profiles",
-		});
+		new Setting(containerEl)
+			.setName("Database profiles")
+			.setHeading();
 
 		this.plugin.settings.databases.forEach((profile, index) => {
 			this.renderProfileSection(containerEl, profile, index);
@@ -78,9 +78,9 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 		const section = containerEl.createDiv({
 			cls: "notion-sync-profile",
 		});
-		section.createEl("h4", {
-			text: profile.name || `Database ${index + 1}`,
-		});
+		new Setting(section)
+			.setName(profile.name || `Database ${index + 1}`)
+			.setHeading();
 
 		new Setting(section)
 			.setName("Enabled")
@@ -125,7 +125,7 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 			.setName("Notion database ID")
 			.setDesc("Use the target data source or database ID from Notion.")
 			.addText((text) => text
-				.setPlaceholder("xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+				.setPlaceholder("Database ID")
 				.setValue(profile.databaseId)
 				.onChange(async (value) => {
 					profile.databaseId = value.trim();
@@ -143,7 +143,7 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(section)
-			.setName("Page id frontmatter key")
+			.setName("Page ID frontmatter key")
 			.setDesc("Frontmatter key used to store the linked Notion page ID.")
 			.addText((text) => text
 				.setValue(profile.notionPageIdField)
@@ -164,15 +164,15 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		section.createEl("h5", {
-			text: "Property mappings",
-		});
+		new Setting(section)
+			.setName("Property mappings")
+			.setHeading();
 
 		profile.propertyMappings.forEach((mapping, mappingIndex) => {
 			new Setting(section)
 				.setName(`Mapping ${mappingIndex + 1}`)
 				.addText((text) => text
-					.setPlaceholder("frontmatter key")
+					.setPlaceholder("Frontmatter key")
 					.setValue(mapping.obsidianKey)
 					.onChange(async (value) => {
 						mapping.obsidianKey = value.trim();
