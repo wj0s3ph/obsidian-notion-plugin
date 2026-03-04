@@ -32,6 +32,17 @@ export interface NotionClientLike {
 export class NotionApiRepository implements NotionRepository {
 	constructor(private readonly createClient: () => NotionClientLike) {}
 
+	async getDatabaseSchema(databaseId: string): Promise<Record<string, string>> {
+		const client = this.createClient();
+		const { dataSource } = await this.resolveDataSource(client, databaseId);
+		return Object.fromEntries(
+			Object.entries(dataSource.properties ?? {}).map(([name, property]) => [
+				name,
+				property.type ?? "unknown",
+			]),
+		);
+	}
+
 	async getDatabaseSnapshot(databaseId: string): Promise<NotionDatabaseSnapshot> {
 		const client = this.createClient();
 		const { dataSource, dataSourceId } = await this.resolveDataSource(client, databaseId);

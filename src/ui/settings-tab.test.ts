@@ -2,6 +2,9 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const createdButtons: FakeButtonControl[] = [];
+const createdDropdowns: FakeDropdownControl[] = [];
+
 class FakeControl {
 	setPlaceholder(): this {
 		return this;
@@ -23,17 +26,28 @@ class FakeTextControl extends FakeControl {
 }
 
 class FakeDropdownControl extends FakeControl {
+	options = new Map<string, string>();
+
 	addOption(): this {
+		const [value, label] = arguments as unknown as [string, string];
+		this.options.set(value, label);
 		return this;
 	}
 }
 
 class FakeButtonControl extends FakeControl {
+	buttonText = "";
+	onClickHandler: (() => unknown | Promise<unknown>) | null = null;
+
 	setButtonText(): this {
+		const [value] = arguments as unknown as [string];
+		this.buttonText = value;
 		return this;
 	}
 
 	onClick(): this {
+		const [callback] = arguments as unknown as [() => unknown | Promise<unknown>];
+		this.onClickHandler = callback;
 		return this;
 	}
 }
@@ -81,6 +95,10 @@ function attachObsidianDomHelpers(element: HTMLElement): HTMLElement {
 }
 
 vi.mock("obsidian", () => {
+	class Notice {
+		constructor(_message?: string) {}
+	}
+
 	class PluginSettingTab {
 		app: unknown;
 		containerEl: HTMLElement;
@@ -126,12 +144,16 @@ vi.mock("obsidian", () => {
 		}
 
 		addButton(callback: (control: FakeButtonControl) => void): this {
-			callback(new FakeButtonControl());
+			const control = new FakeButtonControl();
+			createdButtons.push(control);
+			callback(control);
 			return this;
 		}
 
 		addDropdown(callback: (control: FakeDropdownControl) => void): this {
-			callback(new FakeDropdownControl());
+			const control = new FakeDropdownControl();
+			createdDropdowns.push(control);
+			callback(control);
 			return this;
 		}
 
@@ -142,6 +164,7 @@ vi.mock("obsidian", () => {
 	}
 
 	return {
+		Notice,
 		PluginSettingTab,
 		Setting,
 	};
@@ -153,11 +176,14 @@ import { NotionSyncSettingTab } from "./settings-tab";
 describe("NotionSyncSettingTab", () => {
 	beforeEach(() => {
 		document.body.replaceChildren();
+		createdButtons.length = 0;
+		createdDropdowns.length = 0;
 	});
 
 	it("renders section headings through Setting.setHeading instead of raw heading tags", () => {
 		const profile = createDefaultDatabaseConfig("Tasks");
 		const tab = new NotionSyncSettingTab({} as never, {
+			fetchDatabaseProperties: vi.fn(async () => []),
 			saveSettings: vi.fn(async () => undefined),
 			settings: {
 				databases: [profile],
@@ -176,5 +202,44 @@ describe("NotionSyncSettingTab", () => {
 		expect(tab.containerEl.textContent).not.toContain("Enabled");
 		expect(tab.containerEl.textContent).not.toContain("Vault folder");
 		expect(tab.containerEl.textContent).not.toContain("Remote poll interval");
+	});
+
+	it("renders cached Notion properties in a dropdown and wires a refresh button", async () => {
+		const profile = {
+			...createDefaultDatabaseConfig("Tasks"),
+			databaseId: "db-1",
+			id: "tasks",
+			notionProperties: ["Published", "Slug"],
+			propertyMappings: [{
+				direction: "bidirectional" as const,
+				notionProperty: "Published",
+				obsidianKey: "published",
+			}],
+		};
+		const fetchDatabaseProperties = vi.fn(async () => ["Published", "Slug", "Status"]);
+		const tab = new NotionSyncSettingTab({} as never, {
+			fetchDatabaseProperties,
+			saveSettings: vi.fn(async () => undefined),
+			settings: {
+				databases: [profile],
+				notionToken: "secret_test",
+			},
+		});
+
+		tab.display();
+
+		const propertyDropdown = createdDropdowns.find((dropdown) => dropdown.options.has("Published"));
+		expect(propertyDropdown?.options).toEqual(new Map([
+			["", "Select a property"],
+			["Published", "Published"],
+			["Slug", "Slug"],
+		]));
+
+		const refreshButton = createdButtons.find((button) => button.buttonText === "Fetch properties");
+		expect(refreshButton).toBeDefined();
+
+		await refreshButton?.onClickHandler?.();
+
+		expect(fetchDatabaseProperties).toHaveBeenCalledWith("tasks");
 	});
 });

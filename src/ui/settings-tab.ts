@@ -1,4 +1,4 @@
-import { PluginSettingTab, Setting } from "obsidian";
+import { Notice, PluginSettingTab, Setting } from "obsidian";
 
 import {
 	createDefaultDatabaseConfig,
@@ -7,6 +7,7 @@ import {
 } from "../settings";
 
 interface SettingsHost {
+	fetchDatabaseProperties(profileId: string): Promise<string[]>;
 	saveSettings(): Promise<void>;
 	settings: NotionSyncPluginSettings;
 }
@@ -101,6 +102,21 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					profile.databaseId = value.trim();
 					await this.plugin.saveSettings();
+				}))
+			.addButton((button) => button
+				.setButtonText("Fetch properties")
+				.onClick(async () => {
+					try {
+						const properties = await this.plugin.fetchDatabaseProperties(profile.id);
+						new Notice(
+							properties.length > 0
+								? `Fetched ${properties.length} Notion properties.`
+								: "No Notion properties were found for this database.",
+						);
+						this.display();
+					} catch (error) {
+						new Notice(error instanceof Error ? error.message : "Failed to fetch Notion properties.");
+					}
 				}));
 
 		new Setting(section)
@@ -137,13 +153,21 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 						mapping.obsidianKey = value.trim();
 						await this.plugin.saveSettings();
 					}))
-				.addText((text) => text
-					.setPlaceholder("Notion property")
-					.setValue(mapping.notionProperty)
+				.addDropdown((dropdown) => {
+					dropdown.addOption("", "Select a property");
+					for (const propertyName of new Set([
+						...profile.notionProperties,
+						...(mapping.notionProperty ? [mapping.notionProperty] : []),
+					])) {
+						dropdown.addOption(propertyName, propertyName);
+					}
+
+					dropdown.setValue(mapping.notionProperty)
 					.onChange(async (value) => {
 						mapping.notionProperty = value.trim();
 						await this.plugin.saveSettings();
-					}))
+					});
+				})
 				.addDropdown((dropdown) => dropdown
 					.addOption("bidirectional", "Bidirectional")
 					.addOption("obsidian-to-notion", "Obsidian -> Notion")

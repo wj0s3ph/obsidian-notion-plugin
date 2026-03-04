@@ -144,6 +144,7 @@ class TestPlugin extends NotionSyncPlugin {
 		id: "tasks",
 		name: "Tasks",
 		notionPageIdField: "notionPageId",
+		notionProperties: [],
 		propertyMappings: [],
 		titleProperty: "Name",
 	};
@@ -158,8 +159,14 @@ class TestPlugin extends NotionSyncPlugin {
 			updatedRemotePages: 0,
 		},
 	};
+	databaseSchema = {
+		Name: "title",
+		Published: "date",
+		Slug: "rich_text",
+	};
 
 	syncFile = vi.fn(async () => this.syncResult);
+	saveSettingsMock = vi.fn(async () => undefined);
 
 	protected override async chooseDatabase(_databases: DatabaseSyncSetting[]) {
 		return this.chooseDatabaseMock(_databases);
@@ -169,6 +176,16 @@ class TestPlugin extends NotionSyncPlugin {
 		return {
 			syncFile: this.syncFile,
 		} as never;
+	}
+
+	protected override createNotionRepository() {
+		return {
+			getDatabaseSchema: vi.fn(async () => this.databaseSchema),
+		} as never;
+	}
+
+	override async saveSettings(): Promise<void> {
+		await this.saveSettingsMock();
 	}
 }
 
@@ -229,6 +246,7 @@ describe("NotionSyncPlugin", () => {
 			id: "notes",
 			name: "Notes",
 			notionPageIdField: "notionPageId",
+			notionProperties: [],
 			propertyMappings: [],
 			titleProperty: "Name",
 		});
@@ -277,5 +295,19 @@ describe("NotionSyncPlugin", () => {
 		await plugin.syncActiveFile(true);
 
 		expect(notices).toContain("Active Markdown note could not be read from the vault.");
+	});
+
+	it("fetches database properties for settings-backed mapping dropdowns", async () => {
+		const plugin = new TestPlugin({
+			workspace: {
+				getActiveFile: () => null,
+			},
+			vault: {},
+		});
+
+		await plugin.onload();
+		await expect(plugin.fetchDatabaseProperties("tasks")).resolves.toEqual(["Name", "Published", "Slug"]);
+		expect(plugin.settings.databases[0]?.notionProperties).toEqual(["Name", "Published", "Slug"]);
+		expect(plugin.saveSettingsMock).toHaveBeenCalledTimes(1);
 	});
 });

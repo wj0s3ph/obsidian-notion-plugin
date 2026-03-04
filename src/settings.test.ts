@@ -14,6 +14,7 @@ describe("createDefaultDatabaseConfig", () => {
 		expect(profile.name).toBe("Projects");
 		expect(profile.databaseId).toBe("");
 		expect(profile.notionPageIdField).toBe("notionPageId");
+		expect(profile.notionProperties).toEqual([]);
 		expect(profile.propertyMappings).toEqual([]);
 		expect(profile.id).toMatch(/^database-/);
 	});
@@ -39,8 +40,23 @@ describe("normalizeSettings", () => {
 		expect(database).toMatchObject({
 			name: "Tasks",
 			databaseId: "db-1",
+			notionProperties: [],
 			propertyMappings: [],
 		});
+	});
+
+	it("preserves cached Notion property names for dropdown-backed mapping controls", () => {
+		const normalized = normalizeSettings({
+			databases: [
+				{
+					databaseId: "db-1",
+					name: "Tasks",
+					notionProperties: ["Name", "Published", "Slug"],
+				},
+			],
+		});
+
+		expect(normalized.databases[0]?.notionProperties).toEqual(["Name", "Published", "Slug"]);
 	});
 
 	it("drops incomplete property mappings and defaults the direction to bidirectional", () => {

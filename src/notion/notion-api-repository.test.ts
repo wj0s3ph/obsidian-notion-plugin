@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { NotionApiRepository } from "./notion-api-repository";
 
@@ -187,6 +187,40 @@ describe("NotionApiRepository", () => {
 			result_type: "page",
 			start_cursor: undefined,
 		}]);
+	});
+
+	it("fetches database schema without querying pages when settings only need property names", async () => {
+		const dataSourceQuery = vi.fn(async () => ({
+			has_more: false,
+			next_cursor: null,
+			results: [],
+		}));
+		const repository = new NotionApiRepository(() => ({
+			dataSources: {
+				query: dataSourceQuery,
+				retrieve: async () => ({
+					properties: {
+						Name: { type: "title" },
+						Published: { type: "date" },
+						Slug: { type: "rich_text" },
+					},
+				}),
+			},
+			pages: {
+				retrieveMarkdown: async () => ({
+					markdown: "",
+				}),
+			},
+		}));
+
+		const schema = await repository.getDatabaseSchema("db-1");
+
+		expect(schema).toEqual({
+			Name: "title",
+			Published: "date",
+			Slug: "rich_text",
+		});
+		expect(dataSourceQuery).not.toHaveBeenCalled();
 	});
 
 	it("creates and updates page content through the markdown endpoints", async () => {

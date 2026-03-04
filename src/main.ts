@@ -19,9 +19,11 @@ export default class NotionSyncPlugin extends Plugin {
 	settings: NotionSyncPluginSettings = DEFAULT_SETTINGS;
 
 	private syncService: SyncService | null = null;
+	private notionRepository: NotionApiRepository | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
+		this.notionRepository = this.createNotionRepository();
 		this.syncService = this.createSyncService();
 
 		registerCommands(this);
@@ -38,6 +40,28 @@ export default class NotionSyncPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.settings);
+	}
+
+	async fetchDatabaseProperties(profileId: string): Promise<string[]> {
+		if (!this.settings.notionToken.trim()) {
+			throw new Error("Configure a Notion integration token in plugin settings first.");
+		}
+
+		const profile = this.settings.databases.find((entry) => entry.id === profileId);
+		if (!profile) {
+			throw new Error("Selected Notion database profile is not available.");
+		}
+
+		if (!profile.databaseId.trim()) {
+			throw new Error("Enter a Notion database ID before fetching properties.");
+		}
+
+		const schema = await (this.notionRepository ?? this.createNotionRepository())
+			.getDatabaseSchema(profile.databaseId);
+		const notionProperties = Object.keys(schema).sort((left, right) => left.localeCompare(right));
+		profile.notionProperties = notionProperties;
+		await this.saveSettings();
+		return notionProperties;
 	}
 
 	async syncActiveFile(notify: boolean): Promise<SyncSummary | null> {
@@ -93,10 +117,14 @@ export default class NotionSyncPlugin extends Plugin {
 		return new SyncService({
 			getSettings: () => this.settings,
 			localRepository: new VaultDocumentRepository(this.app.vault),
-			notionRepository: new NotionApiRepository(
-				createNotionClientFactory(() => this.settings.notionToken),
-			),
+			notionRepository: this.notionRepository ?? this.createNotionRepository(),
 		});
+	}
+
+	protected createNotionRepository(): NotionApiRepository {
+		return new NotionApiRepository(
+			createNotionClientFactory(() => this.settings.notionToken),
+		);
 	}
 
 	protected chooseDatabase(databases: DatabaseSyncSetting[]): Promise<DatabaseSyncSetting | null> {

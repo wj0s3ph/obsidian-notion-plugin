@@ -14,6 +14,7 @@ export interface DatabaseSyncSetting {
 	name: string;
 	databaseId: string;
 	notionPageIdField: string;
+	notionProperties: string[];
 	propertyMappings: PropertyMappingSetting[];
 	titleProperty: string;
 }
@@ -34,6 +35,7 @@ export interface PersistedDatabaseSyncSetting {
 	name?: string;
 	databaseId?: string;
 	notionPageIdField?: string;
+	notionProperties?: string[];
 	propertyMappings?: PersistedPropertyMappingSetting[];
 	titleProperty?: string;
 }
@@ -57,6 +59,7 @@ export function createDefaultDatabaseConfig(name = "New database"): DatabaseSync
 		id: createConfigId(),
 		name,
 		notionPageIdField: DEFAULT_NOTION_PAGE_ID_FIELD,
+		notionProperties: [],
 		propertyMappings: [],
 		titleProperty: DEFAULT_TITLE_PROPERTY,
 	};
@@ -98,9 +101,14 @@ function normalizeDatabaseConfig(
 		id: config.id ?? defaults.id,
 		name: config.name ?? defaults.name,
 		notionPageIdField: config.notionPageIdField ?? defaults.notionPageIdField,
+		notionProperties: normalizeNotionProperties(config.notionProperties),
 		propertyMappings: normalizePropertyMappings(config.propertyMappings),
 		titleProperty: config.titleProperty ?? defaults.titleProperty,
 	};
+}
+
+function normalizeNotionProperties(properties: string[] | undefined): string[] {
+	return (properties ?? []).filter((property): property is string => typeof property === "string" && property.trim().length > 0);
 }
 
 function normalizePropertyMappings(
