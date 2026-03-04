@@ -3,6 +3,11 @@ import { Client } from "@notionhq/client";
 import type { NotionDatabaseSnapshot, NotionPage, NotionRepository } from "../sync/engine";
 
 export interface NotionClientLike {
+	databases?: {
+		retrieve: (input: Record<string, unknown>) => Promise<{
+			data_sources?: Array<{ id?: string }>;
+		}>;
+	};
 	dataSources: {
 		query: (input: Record<string, unknown>) => Promise<{
 			has_more?: boolean;
@@ -28,13 +33,11 @@ export class NotionApiRepository implements NotionRepository {
 
 	async getDatabaseSnapshot(databaseId: string): Promise<NotionDatabaseSnapshot> {
 		const client = this.createClient();
-		const dataSource = await client.dataSources.retrieve({
-			data_source_id: databaseId,
-		});
-		const pages = await this.queryDatabasePages(client, databaseId);
+		const { dataSource, dataSourceId } = await this.resolveDataSource(client, databaseId);
+		const pages = await this.queryDatabasePages(client, dataSourceId);
 
 		return {
-			databaseId,
+			databaseId: dataSourceId,
 			pages,
 			schema: Object.fromEntries(
 				Object.entries(dataSource.properties ?? {}).map(([name, property]) => [
@@ -58,15 +61,13 @@ export class NotionApiRepository implements NotionRepository {
 		}
 
 		const createdPage = await client.pages.create({
+			markdown: input.markdown,
 			parent: {
 				data_source_id: input.databaseId,
 				type: "data_source_id",
 			},
 			properties: input.properties,
 		});
-		const pageId = extractPageId(createdPage);
-
-		await this.replaceMarkdown(client, pageId, input.markdown);
 		return this.hydratePage(client, createdPage);
 	}
 
@@ -83,11 +84,47 @@ export class NotionApiRepository implements NotionRepository {
 		}
 
 		const updatedPage = await client.pages.update({
+			erase_content: true,
 			page_id: input.pageId,
 			properties: input.properties,
 		});
-		await this.replaceMarkdown(client, input.pageId, input.markdown);
+		await this.insertMarkdown(client, input.pageId, input.markdown);
 		return this.hydratePage(client, updatedPage);
+	}
+
+	private async resolveDataSource(
+		client: NotionClientLike,
+		databaseId: string,
+	): Promise<{
+		dataSource: {
+			properties?: Record<string, { type?: string }>;
+		};
+		dataSourceId: string;
+	}> {
+		try {
+			return {
+				dataSource: await client.dataSources.retrieve({
+					data_source_id: databaseId,
+				}),
+				dataSourceId: databaseId,
+			};
+		} catch (error) {
+			if (!isNotionObjectNotFoundError(error) || !client.databases?.retrieve) {
+				throw error;
+			}
+		}
+
+		const database = await client.databases.retrieve({
+			database_id: databaseId,
+		});
+		const dataSourceId = extractFirstDataSourceId(database);
+
+		return {
+			dataSource: await client.dataSources.retrieve({
+				data_source_id: dataSourceId,
+			}),
+			dataSourceId,
+		};
 	}
 
 	private async hydratePage(client: NotionClientLike, page: unknown): Promise<NotionPage> {
@@ -133,7 +170,7 @@ export class NotionApiRepository implements NotionRepository {
 		return pages;
 	}
 
-	private replaceMarkdown(
+	private insertMarkdown(
 		client: NotionClientLike,
 		pageId: string,
 		markdown: string,
@@ -143,13 +180,11 @@ export class NotionApiRepository implements NotionRepository {
 		}
 
 		return client.pages.updateMarkdown({
-			page_id: pageId,
-			replace_content_range: {
-				allow_deleting_content: true,
+			insert_content: {
 				content: markdown,
-				content_range: "all",
 			},
-			type: "replace_content_range",
+			page_id: pageId,
+			type: "insert_content",
 		});
 	}
 }
@@ -168,8 +203,22 @@ function assertPageLike(value: unknown): PageLike {
 	return value;
 }
 
-function extractPageId(value: unknown): string {
-	return assertPageLike(value).id;
+function extractFirstDataSourceId(value: unknown): string {
+	if (
+		typeof value === "object"
+		&& value !== null
+		&& "data_sources" in value
+		&& Array.isArray(value.data_sources)
+	) {
+		const dataSources = value.data_sources as unknown[];
+		const dataSource = dataSources[0];
+		const dataSourceId = getNonEmptyId(dataSource);
+		if (dataSourceId) {
+			return dataSourceId;
+		}
+	}
+
+	throw new Error("Database is not backed by a Notion data source");
 }
 
 function extractPageTitle(properties: Record<string, unknown>): string {
@@ -229,6 +278,27 @@ function isPageLike(value: unknown): value is PageLike {
 		&& "object" in value
 		&& value.object === "page"
 	);
+}
+
+function isNotionObjectNotFoundError(error: unknown): boolean {
+	return (
+		typeof error === "object"
+		&& error !== null
+		&& "code" in error
+		&& error.code === "object_not_found"
+	);
+}
+
+function getNonEmptyId(value: unknown): string | null {
+	return (
+		typeof value === "object"
+		&& value !== null
+		&& "id" in value
+		&& typeof value.id === "string"
+		&& value.id.trim()
+	)
+		? value.id
+		: null;
 }
 
 function normalizeProperties(
