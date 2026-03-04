@@ -11,15 +11,31 @@ const addSettingTab = vi.fn();
 const registerEvent = vi.fn();
 const registerInterval = vi.fn();
 const notices: string[] = [];
+const hiddenNotices: string[] = [];
 const commands: Array<Record<string, unknown>> = [];
 const ribbons: Array<{ callback: () => void; icon: string; title: string }> = [];
 
 vi.mock("obsidian", () => {
 	class Notice {
+		private message = "";
+
 		constructor(message?: string) {
+			this.message = message ?? "";
 			if (message) {
 				notices.push(message);
 			}
+		}
+
+		hide(): void {
+			if (this.message) {
+				hiddenNotices.push(this.message);
+			}
+		}
+
+		setMessage(message: string): this {
+			this.message = message;
+			notices.push(message);
+			return this;
 		}
 	}
 
@@ -200,6 +216,7 @@ describe("NotionSyncPlugin", () => {
 		registerEvent.mockClear();
 		registerInterval.mockClear();
 		notices.length = 0;
+		hiddenNotices.length = 0;
 		commands.length = 0;
 		ribbons.length = 0;
 	});
@@ -329,5 +346,45 @@ describe("NotionSyncPlugin", () => {
 		await plugin.pullActiveFileFromNotion(true);
 
 		expect(plugin.pullFile).toHaveBeenCalledWith("Tasks/launch.md", "tasks");
+	});
+
+	it("shows immediate progress feedback while sync is still running", async () => {
+		let resolveSync: ((value: SyncFileResult) => void) | null = null;
+		const plugin = new TestPlugin({
+			workspace: {
+				getActiveFile: () => ({
+					extension: "md",
+					path: "Tasks/launch.md",
+				}),
+			},
+			vault: {},
+		});
+		plugin.syncFile = vi.fn(() => new Promise<SyncFileResult>((resolve: (value: SyncFileResult) => void) => {
+			resolveSync = resolve;
+		}));
+
+		await plugin.onload();
+		const syncPromise = plugin.syncActiveFile(true);
+		await Promise.resolve();
+
+		expect(notices).toContain("Syncing Tasks...");
+
+		if (resolveSync) {
+			const completeSync = resolveSync as (value: SyncFileResult) => void;
+			completeSync({
+				status: "success",
+				summary: {
+					createdLocalDocuments: 0,
+					createdRemotePages: 1,
+					skipped: 0,
+					updatedLocalDocuments: 0,
+					updatedRemotePages: 0,
+				},
+			});
+		}
+		await syncPromise;
+
+		expect(hiddenNotices).toContain("Syncing Tasks...");
+		expect(notices).toContain("Synced Tasks: +1 remote, +0 local, ~0 remote, ~0 local.");
 	});
 });

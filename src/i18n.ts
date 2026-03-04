@@ -19,6 +19,7 @@ export interface I18nStrings {
 	failedToFetchNotionProperties: string;
 	failedToPull(filePath: string, databaseName: string): string;
 	failedToSync(filePath: string, databaseName: string): string;
+	pullingInProgress(databaseName: string): string;
 	featureFetchProperties: string;
 	fetchedNotionProperties(count: number): string;
 	frontmatterKeyPlaceholder: string;
@@ -49,6 +50,7 @@ export interface I18nStrings {
 	selectedProfileUnavailable: string;
 	settingsAndNoticesDescription: string;
 	summary(prefix: string, createdRemote: number, createdLocal: number, updatedRemote: number, updatedLocal: number): string;
+	syncingInProgress(databaseName: string): string;
 	syncSummary(databaseName: string): string;
 	titleProperty: string;
 	titlePropertyDescription: string;
@@ -71,6 +73,7 @@ const EN_STRINGS: I18nStrings = {
 	failedToFetchNotionProperties: "Failed to fetch Notion properties.",
 	failedToPull: (filePath, databaseName) => `Failed to pull ${filePath} from ${databaseName}`,
 	failedToSync: (filePath, databaseName) => `Failed to sync ${filePath} with ${databaseName}`,
+	pullingInProgress: (databaseName) => `Pulling ${databaseName}...`,
 	featureFetchProperties: "Fetch properties",
 	fetchedNotionProperties: (count) => `Fetched ${count} Notion properties.`,
 	frontmatterKeyPlaceholder: "Frontmatter key",
@@ -102,6 +105,7 @@ const EN_STRINGS: I18nStrings = {
 	settingsAndNoticesDescription: "Shown in settings and notices.",
 	summary: (prefix, createdRemote, createdLocal, updatedRemote, updatedLocal) =>
 		`${prefix}: +${createdRemote} remote, +${createdLocal} local, ~${updatedRemote} remote, ~${updatedLocal} local.`,
+	syncingInProgress: (databaseName) => `Syncing ${databaseName}...`,
 	syncSummary: (databaseName) => `Synced ${databaseName}`,
 	titleProperty: "Title property",
 	titlePropertyDescription: "Notion title property used when creating or updating pages.",
@@ -124,6 +128,7 @@ const ZH_CN_STRINGS: I18nStrings = {
 	failedToFetchNotionProperties: "拉取 Notion 属性失败。",
 	failedToPull: (filePath, databaseName) => `从 ${databaseName} 拉取 ${filePath} 失败`,
 	failedToSync: (filePath, databaseName) => `同步 ${filePath} 到 ${databaseName} 失败`,
+	pullingInProgress: (databaseName) => `正在从 ${databaseName} 拉取...`,
 	featureFetchProperties: "拉取属性",
 	fetchedNotionProperties: (count) => `已拉取 ${count} 个 Notion 属性。`,
 	frontmatterKeyPlaceholder: "Frontmatter 键",
@@ -155,6 +160,7 @@ const ZH_CN_STRINGS: I18nStrings = {
 	settingsAndNoticesDescription: "用于设置页和通知中的显示名称。",
 	summary: (prefix, createdRemote, createdLocal, updatedRemote, updatedLocal) =>
 		`${prefix}：远端新增 ${createdRemote}，本地新增 ${createdLocal}，远端更新 ${updatedRemote}，本地更新 ${updatedLocal}。`,
+	syncingInProgress: (databaseName) => `正在同步 ${databaseName}...`,
 	syncSummary: (databaseName) => `已同步 ${databaseName}`,
 	titleProperty: "标题属性",
 	titlePropertyDescription: "创建或更新页面时使用的 Notion 标题属性。",

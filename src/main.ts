@@ -115,26 +115,39 @@ export default class NotionSyncPlugin extends Plugin {
 				return null;
 			}
 
-			const result = await execute(file.path, database.id);
-			if (!result) {
-				return null;
-			}
-			if (result.status !== "success") {
-				if (notify) {
-					new Notice(result.message);
-				}
-				return null;
-			}
-
-			if (notify) {
-				new Notice(this.formatSummary(
+			const progressNotice = notify
+				? new Notice(
 					action === "pull"
-						? strings.pullSummary(database.name || strings.selectedDatabaseFallback)
-						: strings.syncSummary(database.name || strings.selectedDatabaseFallback),
-					result.summary,
-				));
+						? strings.pullingInProgress(database.name || strings.selectedDatabaseFallback)
+						: strings.syncingInProgress(database.name || strings.selectedDatabaseFallback),
+					0,
+				)
+				: null;
+
+			try {
+				const result = await execute(file.path, database.id);
+				if (!result) {
+					return null;
+				}
+				if (result.status !== "success") {
+					if (notify) {
+						new Notice(result.message);
+					}
+					return null;
+				}
+
+				if (notify) {
+					new Notice(this.formatSummary(
+						action === "pull"
+							? strings.pullSummary(database.name || strings.selectedDatabaseFallback)
+							: strings.syncSummary(database.name || strings.selectedDatabaseFallback),
+						result.summary,
+					));
+				}
+				return result.summary;
+			} finally {
+				progressNotice?.hide();
 			}
-			return result.summary;
 		} catch (error) {
 			this.handleSyncError(
 				error,
