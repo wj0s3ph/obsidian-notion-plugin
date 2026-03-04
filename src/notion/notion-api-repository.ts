@@ -266,9 +266,7 @@ function normalizePropertyValue(type: string, property: unknown): unknown {
 			return type in record && typeof record[type] === "string" ? record[type] : null;
 		case "date":
 			return "date" in record && typeof record.date === "object" && record.date !== null
-				? ("start" in record.date && typeof record.date.start === "string"
-					? record.date.start
-					: null)
+				? normalizeDatePropertyValue(record.date)
 				: null;
 		case "email":
 		case "phone_number":
@@ -308,6 +306,15 @@ function getPropertyType(property: unknown): string {
 	return typeof property === "object" && property !== null && "type" in property && typeof property.type === "string"
 		? property.type
 		: "unknown";
+}
+
+function normalizeDatePropertyValue(value: unknown): string | { start: string; end?: string } | null {
+	if (typeof value !== "object" || value === null || !("start" in value) || typeof value.start !== "string") {
+		return null;
+	}
+
+	const end = "end" in value && typeof value.end === "string" ? value.end : undefined;
+	return end ? { end, start: value.start } : value.start;
 }
 
 interface PageLike {

@@ -357,4 +357,54 @@ describe("NotionApiRepository", () => {
 			title: "Untitled",
 		});
 	});
+
+	it("preserves Notion date ranges instead of flattening them to a single start date", async () => {
+		const repository = new NotionApiRepository(() => ({
+			dataSources: {
+				query: async () => ({
+					has_more: false,
+					next_cursor: null,
+					results: [{
+						id: "page-1",
+						last_edited_time: "2026-03-04T10:00:00.000Z",
+						object: "page",
+						properties: {
+							Date: {
+								date: {
+									end: "2026-03-05",
+									start: "2026-03-04",
+								},
+								type: "date",
+							},
+							Name: {
+								title: [{ plain_text: "Launch" }],
+								type: "title",
+							},
+						},
+					}],
+				}),
+				retrieve: async () => ({
+					properties: {
+						Date: { type: "date" },
+						Name: { type: "title" },
+					},
+				}),
+			},
+			pages: {
+				retrieveMarkdown: async () => ({
+					markdown: "# Launch",
+				}),
+			},
+		}));
+
+		const snapshot = await repository.getDatabaseSnapshot("db-1");
+
+		expect(snapshot.pages[0]?.properties.Date).toEqual({
+			type: "date",
+			value: {
+				end: "2026-03-05",
+				start: "2026-03-04",
+			},
+		});
+	});
 });
