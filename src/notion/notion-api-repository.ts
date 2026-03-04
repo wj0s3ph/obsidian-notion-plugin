@@ -192,7 +192,16 @@ export class NotionApiRepository implements NotionRepository {
 export function createNotionClientFactory(getToken: () => string): () => NotionClientLike {
 	return () => new Client({
 		auth: getToken().trim(),
+		fetch: getBoundFetch(),
 	}) as NotionClientLike;
+}
+
+function getBoundFetch(): typeof fetch | undefined {
+	if (typeof globalThis.fetch !== "function") {
+		return undefined;
+	}
+
+	return globalThis.fetch.bind(globalThis);
 }
 
 function assertPageLike(value: unknown): PageLike {
