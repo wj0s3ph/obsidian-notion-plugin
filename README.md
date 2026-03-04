@@ -97,6 +97,7 @@ Example:
 ```bash
 npm install
 npm run build
+npm run build:release
 npm test
 npm run test:coverage
 ```
@@ -110,6 +111,12 @@ The plugin release should contain:
 - `main.js`
 - `manifest.json`
 - `styles.css`
+
+## GitHub release build
+
+Use `npm run build:release` to produce GitHub release assets in `release/`.
+
+This repository also includes `.github/workflows/release.yml`, which builds and uploads `release/*` whenever you push a SemVer tag such as `1.0.1`.
 
 ## Notes
 
