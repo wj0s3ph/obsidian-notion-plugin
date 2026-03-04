@@ -112,6 +112,83 @@ describe("NotionApiRepository", () => {
 		});
 	});
 
+	it("resolves a database id to its backing data source before querying pages", async () => {
+		const dataSourceRetrieveCalls: unknown[] = [];
+		const dataSourceQueryCalls: unknown[] = [];
+		const databaseRetrieveCalls: unknown[] = [];
+		const repository = new NotionApiRepository(() => ({
+			databases: {
+				retrieve: async (input: unknown) => {
+					databaseRetrieveCalls.push(input);
+					return {
+						data_sources: [{
+							id: "data-source-1",
+						}],
+					};
+				},
+			},
+			dataSources: {
+				query: async (input) => {
+					dataSourceQueryCalls.push(input);
+					return {
+						has_more: false,
+						next_cursor: null,
+						results: [{
+							id: "page-1",
+							last_edited_time: "2026-03-04T10:00:00.000Z",
+							object: "page",
+							properties: {
+								Name: {
+									title: [{ plain_text: "Launch" }],
+									type: "title",
+								},
+							},
+						}],
+					};
+				},
+				retrieve: async (input) => {
+					dataSourceRetrieveCalls.push(input);
+					if (input.data_source_id === "database-1") {
+						const error = new Error("Could not find database with ID: database-1.");
+						Object.assign(error, {
+							code: "object_not_found",
+							status: 404,
+						});
+						throw error;
+					}
+
+					return {
+						properties: {
+							Name: { type: "title" },
+						},
+					};
+				},
+			},
+			pages: {
+				retrieveMarkdown: async () => ({
+					markdown: "# Launch",
+				}),
+			},
+		}));
+
+		const snapshot = await repository.getDatabaseSnapshot("database-1");
+
+		expect(snapshot.databaseId).toBe("data-source-1");
+		expect(snapshot.pages).toHaveLength(1);
+		expect(databaseRetrieveCalls).toEqual([{
+			database_id: "database-1",
+		}]);
+		expect(dataSourceRetrieveCalls).toEqual([
+			{ data_source_id: "database-1" },
+			{ data_source_id: "data-source-1" },
+		]);
+		expect(dataSourceQueryCalls).toEqual([{
+			data_source_id: "data-source-1",
+			result_type: "page",
+			start_cursor: undefined,
+		}]);
+	});
+
 	it("creates and updates page content through the markdown endpoints", async () => {
 		const createCalls: unknown[] = [];
 		const updateCalls: unknown[] = [];
@@ -188,6 +265,7 @@ describe("NotionApiRepository", () => {
 		});
 
 		expect(createCalls).toEqual([{
+			markdown: "# Launch",
 			parent: {
 				data_source_id: "db-1",
 				type: "data_source_id",
@@ -200,6 +278,7 @@ describe("NotionApiRepository", () => {
 			},
 		}]);
 		expect(updateCalls).toEqual([{
+			erase_content: true,
 			page_id: "page-1",
 			properties: {
 				Name: {
@@ -211,21 +290,10 @@ describe("NotionApiRepository", () => {
 		expect(markdownCalls).toEqual([
 			{
 				page_id: "page-1",
-				replace_content_range: {
-					allow_deleting_content: true,
-					content: "# Launch",
-					content_range: "all",
-				},
-				type: "replace_content_range",
-			},
-			{
-				page_id: "page-1",
-				replace_content_range: {
-					allow_deleting_content: true,
+				insert_content: {
 					content: "# Updated",
-					content_range: "all",
 				},
-				type: "replace_content_range",
+				type: "insert_content",
 			},
 		]);
 	});
