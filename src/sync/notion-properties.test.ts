@@ -228,6 +228,32 @@ describe("buildNotionPropertyPayload", () => {
 		});
 	});
 
+	it("serializes a plain frontmatter date string into a Notion date object", () => {
+		const payload = buildNotionPropertyPayload({
+			frontmatter: {
+				published: "2026-03-05",
+			},
+			mappings: [{
+				direction: "bidirectional",
+				notionProperty: "Published",
+				obsidianKey: "published",
+			}],
+			notionSchema: {
+				Published: "date",
+			},
+			syncDirection: "obsidian-to-notion",
+		});
+
+		expect(payload).toEqual({
+			Published: {
+				date: {
+					start: "2026-03-05",
+				},
+				type: "date",
+			},
+		});
+	});
+
 	it("drops unmappable values and unknown schema properties", () => {
 		const payload = buildNotionPropertyPayload({
 			frontmatter: {

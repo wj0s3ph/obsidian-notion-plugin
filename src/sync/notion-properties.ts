@@ -114,7 +114,9 @@ export function extractObsidianProperties(
 
 function normalizeDateValue(value: unknown): string | { start: string; end?: string } | null {
 	if (typeof value === "string") {
-		return value;
+		return {
+			start: value,
+		};
 	}
 
 	if (
