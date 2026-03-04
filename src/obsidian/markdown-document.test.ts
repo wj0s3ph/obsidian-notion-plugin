@@ -35,6 +35,18 @@ Body
 			frontmatter: {},
 		});
 	});
+
+	it("parses YAML frontmatter when the document uses CRLF line endings", () => {
+		const document = parseMarkdownDocument("---\r\nstatus: Todo\r\ntags:\r\n  - alpha\r\n---\r\n# Launch\r\n");
+
+		expect(document).toEqual({
+			content: "# Launch\r\n",
+			frontmatter: {
+				status: "Todo",
+				tags: ["alpha"],
+			},
+		});
+	});
 });
 
 describe("renderMarkdownDocument", () => {

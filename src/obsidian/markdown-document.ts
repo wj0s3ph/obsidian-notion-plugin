@@ -5,7 +5,7 @@ export interface MarkdownDocument {
 	frontmatter: Record<string, unknown>;
 }
 
-const FRONTMATTER_PATTERN = /^---\n([\s\S]*?)\n---\n?/;
+const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
 export function parseMarkdownDocument(markdown: string): MarkdownDocument {
 	const match = markdown.match(FRONTMATTER_PATTERN);
