@@ -135,16 +135,6 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(section)
-			.setName(strings.pageIdFrontmatterKey)
-			.setDesc(strings.pageIdFrontmatterKeyDescription)
-			.addText((text) => text
-				.setValue(profile.notionPageIdField)
-				.onChange(async (value) => {
-					profile.notionPageIdField = value.trim() || "notionPageId";
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(section)
 			.setName(strings.propertyMappings)
 			.setHeading();
 

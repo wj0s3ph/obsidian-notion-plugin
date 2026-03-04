@@ -59,6 +59,18 @@ describe("normalizeSettings", () => {
 		expect(normalized.databases[0]?.notionProperties).toEqual(["Name", "Published", "Slug"]);
 	});
 
+	it("keeps notionPageIdField pinned to the preset default", () => {
+		const normalized = normalizeSettings({
+			databases: [{
+				databaseId: "db-1",
+				name: "Tasks",
+				notionPageIdField: "customPageId",
+			}],
+		});
+
+		expect(normalized.databases[0]?.notionPageIdField).toBe("notionPageId");
+	});
+
 	it("drops incomplete property mappings and defaults the direction to bidirectional", () => {
 		const normalized = normalizeSettings({
 			databases: [

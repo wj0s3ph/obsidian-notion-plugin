@@ -100,7 +100,7 @@ function normalizeDatabaseConfig(
 		databaseId: config.databaseId ?? defaults.databaseId,
 		id: config.id ?? defaults.id,
 		name: config.name ?? defaults.name,
-		notionPageIdField: config.notionPageIdField ?? defaults.notionPageIdField,
+		notionPageIdField: defaults.notionPageIdField,
 		notionProperties: normalizeNotionProperties(config.notionProperties),
 		propertyMappings: normalizePropertyMappings(config.propertyMappings),
 		titleProperty: config.titleProperty ?? defaults.titleProperty,

@@ -199,6 +199,7 @@ describe("NotionSyncSettingTab", () => {
 		expect(tab.containerEl.textContent).toContain("Database profiles");
 		expect(tab.containerEl.textContent).toContain("Tasks");
 		expect(tab.containerEl.textContent).toContain("Property mappings");
+		expect(tab.containerEl.textContent).not.toContain("Page ID frontmatter key");
 		expect(tab.containerEl.textContent).not.toContain("Sync on startup");
 		expect(tab.containerEl.textContent).not.toContain("Enabled");
 		expect(tab.containerEl.textContent).not.toContain("Vault folder");
