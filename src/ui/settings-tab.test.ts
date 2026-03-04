@@ -28,8 +28,7 @@ class FakeTextControl extends FakeControl {
 class FakeDropdownControl extends FakeControl {
 	options = new Map<string, string>();
 
-	addOption(): this {
-		const [value, label] = arguments as unknown as [string, string];
+	addOption(value: string, label: string): this {
 		this.options.set(value, label);
 		return this;
 	}
@@ -37,16 +36,14 @@ class FakeDropdownControl extends FakeControl {
 
 class FakeButtonControl extends FakeControl {
 	buttonText = "";
-	onClickHandler: (() => unknown | Promise<unknown>) | null = null;
+	onClickHandler: (() => void | Promise<void>) | null = null;
 
-	setButtonText(): this {
-		const [value] = arguments as unknown as [string];
+	setButtonText(value: string): this {
 		this.buttonText = value;
 		return this;
 	}
 
-	onClick(): this {
-		const [callback] = arguments as unknown as [() => unknown | Promise<unknown>];
+	onClick(callback: () => void | Promise<void>): this {
 		this.onClickHandler = callback;
 		return this;
 	}

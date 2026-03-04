@@ -1,5 +1,9 @@
 export const RELEASE_DIR = "release";
 
+/**
+ * @param {{ hasStyles: boolean }} options
+ * @returns {string[]}
+ */
 export function getReleaseAssetNames({ hasStyles }) {
 	return [
 		"main.js",
@@ -8,6 +12,10 @@ export function getReleaseAssetNames({ hasStyles }) {
 	];
 }
 
+/**
+ * @param {unknown} manifest
+ * @returns {{ id: string; version: string }}
+ */
 export function validateReleaseManifest(manifest) {
 	if (!manifest || typeof manifest !== "object") {
 		throw new Error("manifest.json must be a JSON object");

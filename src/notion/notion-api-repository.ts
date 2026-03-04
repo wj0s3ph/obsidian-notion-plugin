@@ -247,7 +247,7 @@ function createRequestUrlFetch(requestUrl: typeof obsidian.requestUrl): typeof f
 			headers: sanitizeHeaderRecord(sanitized?.headers),
 			method: sanitized?.method,
 			throw: false,
-			url: typeof input === "string" ? input : input.toString(),
+			url: normalizeRequestUrl(input),
 		});
 		return createResponseLike(response);
 	};
@@ -258,11 +258,24 @@ function sanitizeRequestInit(init: RequestInit | undefined): RequestInit | undef
 		return undefined;
 	}
 
-	const { agent: _agent, ...rest } = init as RequestInit & { agent?: unknown };
+	const rest = { ...(init as RequestInit & { agent?: unknown }) };
+	delete rest.agent;
 	return {
 		...rest,
 		headers: sanitizeHeaders(rest.headers),
 	};
+}
+
+function normalizeRequestUrl(input: RequestInfo | URL): string {
+	if (typeof input === "string") {
+		return input;
+	}
+
+	if (input instanceof URL) {
+		return input.toString();
+	}
+
+	return input.url;
 }
 
 function sanitizeHeaders(headers: HeadersInit | undefined): HeadersInit | undefined {
