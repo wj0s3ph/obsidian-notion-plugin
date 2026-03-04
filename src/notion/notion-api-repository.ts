@@ -192,16 +192,51 @@ export class NotionApiRepository implements NotionRepository {
 export function createNotionClientFactory(getToken: () => string): () => NotionClientLike {
 	return () => new Client({
 		auth: getToken().trim(),
-		fetch: getBoundFetch(),
+		fetch: createBrowserSafeFetch(),
 	}) as NotionClientLike;
 }
 
-function getBoundFetch(): typeof fetch | undefined {
+function createBrowserSafeFetch(): typeof fetch | undefined {
 	if (typeof globalThis.fetch !== "function") {
 		return undefined;
 	}
 
-	return globalThis.fetch.bind(globalThis);
+	return (input, init) => globalThis.fetch(
+		input,
+		sanitizeRequestInit(init),
+	);
+}
+
+function sanitizeRequestInit(init: RequestInit | undefined): RequestInit | undefined {
+	if (!init) {
+		return undefined;
+	}
+
+	const { agent: _agent, ...rest } = init as RequestInit & { agent?: unknown };
+	return {
+		...rest,
+		headers: sanitizeHeaders(rest.headers),
+	};
+}
+
+function sanitizeHeaders(headers: HeadersInit | undefined): HeadersInit | undefined {
+	if (!headers) {
+		return headers;
+	}
+
+	const sanitized = new Headers(headers);
+	sanitized.delete("user-agent");
+	return headersToPlainObject(sanitized);
+}
+
+function headersToPlainObject(headers: Headers): Record<string, string> {
+	const result: Record<string, string> = {};
+
+	headers.forEach((value, key) => {
+		result[key] = value;
+	});
+
+	return result;
 }
 
 function assertPageLike(value: unknown): PageLike {

@@ -43,4 +43,35 @@ describe("createNotionClientFactory", () => {
 		).resolves.toEqual({ ok: true });
 		expect(rawFetch).toHaveBeenCalledTimes(1);
 	});
+
+	it("strips browser-unsafe request options before delegating to fetch", async () => {
+		const rawFetch = vi.fn(async () => ({ ok: true }));
+		vi.stubGlobal("fetch", rawFetch);
+
+		const createClient = createNotionClientFactory(() => "secret_test");
+		const client = createClient() as { options?: Record<string, unknown> };
+		const fetchOption = client.options?.fetch as (
+			input: string,
+			init?: Record<string, unknown>,
+		) => Promise<unknown>;
+
+		await fetchOption("https://example.com", {
+			agent: { keepAlive: true },
+			headers: {
+				authorization: "Bearer secret",
+				"user-agent": "notionhq-client/test",
+				"x-test": "1",
+			},
+			method: "POST",
+		});
+
+		expect(rawFetch).toHaveBeenCalledTimes(1);
+		expect(rawFetch).toHaveBeenCalledWith("https://example.com", {
+			headers: {
+				authorization: "Bearer secret",
+				"x-test": "1",
+			},
+			method: "POST",
+		});
+	});
 });
