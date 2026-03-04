@@ -1,4 +1,5 @@
 import type { DatabaseSyncSetting, NotionSyncPluginSettings } from "../settings";
+import { getStrings } from "../i18n";
 import type { LocalDocumentRepository, NotionRepository, SyncSummary } from "./engine";
 import { pullRemoteDatabaseFile, syncDatabaseFile } from "./engine";
 
@@ -36,10 +37,11 @@ export class SyncService {
 	}
 
 	async pullFile(path: string, profileId: string): Promise<SyncFileResult> {
+		const strings = getStrings();
 		const document = await this.options.localRepository.readDocument(path);
 		if (!document) {
 			return {
-				message: "Active Markdown note could not be read from the vault.",
+				message: strings.activeNoteCouldNotBeRead,
 				reason: "document-not-found",
 				status: "skipped",
 			};
@@ -62,7 +64,7 @@ export class SyncService {
 				notionRepository: this.options.notionRepository,
 			});
 		}, {
-			skippedMessage: "Link this note to a Notion page before pulling from Notion.",
+			skippedMessage: strings.linkNoteBeforePulling,
 			skippedReason: "note-not-linked",
 		});
 	}
@@ -79,9 +81,10 @@ export class SyncService {
 			skippedReason: "document-not-found",
 		},
 	): Promise<SyncFileResult> {
+		const strings = getStrings();
 		if (!this.options.getSettings().notionToken.trim()) {
 			return {
-				message: "Configure a Notion integration token in plugin settings first.",
+				message: strings.configureTokenFirst,
 				reason: "token-missing",
 				status: "skipped",
 			};
@@ -90,7 +93,7 @@ export class SyncService {
 		const profile = this.getConfiguredProfiles().find((entry) => entry.id === profileId);
 		if (!profile) {
 			return {
-				message: "Selected Notion database profile is not available.",
+				message: strings.selectedProfileUnavailable,
 				reason: "profile-not-found",
 				status: "skipped",
 			};
@@ -99,7 +102,7 @@ export class SyncService {
 		const document = await this.options.localRepository.readDocument(path);
 		if (!document) {
 			return {
-				message: "Active Markdown note could not be read from the vault.",
+				message: strings.activeNoteCouldNotBeRead,
 				reason: "document-not-found",
 				status: "skipped",
 			};

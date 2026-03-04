@@ -1,5 +1,6 @@
 import { Notice, PluginSettingTab, Setting } from "obsidian";
 
+import { getStrings } from "../i18n";
 import {
 	createDefaultDatabaseConfig,
 	type DatabaseSyncSetting,
@@ -18,20 +19,21 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
+		const strings = getStrings();
 		const { containerEl } = this;
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Integration")
+			.setName(strings.integration)
 			.setHeading();
 
 		new Setting(containerEl)
-			.setName("Integration token")
-			.setDesc("Paste your Notion internal integration token.")
+			.setName(strings.integrationToken)
+			.setDesc(strings.pasteIntegrationToken)
 			.addText((text) => {
 				text.inputEl.type = "password";
 				text
-					.setPlaceholder("Secret token")
+					.setPlaceholder(strings.secretToken)
 					.setValue(this.plugin.settings.notionToken)
 					.onChange(async (value) => {
 						this.plugin.settings.notionToken = value.trim();
@@ -40,7 +42,7 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Database profiles")
+			.setName(strings.databaseProfiles)
 			.setHeading();
 
 		this.plugin.settings.databases.forEach((profile, index) => {
@@ -48,13 +50,15 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 		});
 
 		new Setting(containerEl)
-			.setName("Add database profile")
-			.setDesc("Create another Notion database profile.")
+			.setName(strings.addDatabaseProfile)
+			.setDesc(strings.createAnotherDatabaseProfile)
 			.addButton((button) => button
-				.setButtonText("Add profile")
+				.setButtonText(strings.addProfile)
 				.onClick(async () => {
 					this.plugin.settings.databases.push(
-						createDefaultDatabaseConfig(`Database ${this.plugin.settings.databases.length + 1}`),
+						createDefaultDatabaseConfig(
+							strings.databaseProfileName(this.plugin.settings.databases.length + 1),
+						),
 					);
 					await this.plugin.saveSettings();
 					this.display();
@@ -66,17 +70,18 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 		profile: DatabaseSyncSetting,
 		index: number,
 	): void {
+		const strings = getStrings();
 		const section = containerEl.createDiv({
 			cls: "notion-sync-profile",
 		});
 		new Setting(section)
-			.setName(profile.name || `Database ${index + 1}`)
+			.setName(profile.name || strings.databaseProfileName(index + 1))
 			.setHeading();
 
 		new Setting(section)
 			.addExtraButton((button) => button
 				.setIcon("trash")
-				.setTooltip("Remove profile")
+				.setTooltip(strings.removeProfile)
 				.onClick(async () => {
 					this.plugin.settings.databases.splice(index, 1);
 					await this.plugin.saveSettings();
@@ -84,8 +89,8 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(section)
-			.setName("Profile name")
-			.setDesc("Shown in settings and notices.")
+			.setName(strings.profileName)
+			.setDesc(strings.profileNameDescription)
 			.addText((text) => text
 				.setValue(profile.name)
 				.onChange(async (value) => {
@@ -94,34 +99,34 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(section)
-			.setName("Notion database ID")
-			.setDesc("Use the target data source or database ID from Notion.")
+			.setName(strings.notionDatabaseId)
+			.setDesc(strings.notionDatabaseIdDescription)
 			.addText((text) => text
-				.setPlaceholder("Database ID")
+				.setPlaceholder(strings.databaseIdPlaceholder)
 				.setValue(profile.databaseId)
 				.onChange(async (value) => {
 					profile.databaseId = value.trim();
 					await this.plugin.saveSettings();
 				}))
 			.addButton((button) => button
-				.setButtonText("Fetch properties")
+				.setButtonText(strings.featureFetchProperties)
 				.onClick(async () => {
 					try {
 						const properties = await this.plugin.fetchDatabaseProperties(profile.id);
 						new Notice(
 							properties.length > 0
-								? `Fetched ${properties.length} Notion properties.`
-								: "No Notion properties were found for this database.",
+								? strings.fetchedNotionProperties(properties.length)
+								: strings.noNotionPropertiesFound,
 						);
 						this.display();
 					} catch (error) {
-						new Notice(error instanceof Error ? error.message : "Failed to fetch Notion properties.");
+						new Notice(error instanceof Error ? error.message : strings.failedToFetchNotionProperties);
 					}
 				}));
 
 		new Setting(section)
-			.setName("Title property")
-			.setDesc("Notion title property used when creating or updating pages.")
+			.setName(strings.titleProperty)
+			.setDesc(strings.titlePropertyDescription)
 			.addText((text) => text
 				.setValue(profile.titleProperty)
 				.onChange(async (value) => {
@@ -130,8 +135,8 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(section)
-			.setName("Page ID frontmatter key")
-			.setDesc("Frontmatter key used to store the linked Notion page ID.")
+			.setName(strings.pageIdFrontmatterKey)
+			.setDesc(strings.pageIdFrontmatterKeyDescription)
 			.addText((text) => text
 				.setValue(profile.notionPageIdField)
 				.onChange(async (value) => {
@@ -140,21 +145,21 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(section)
-			.setName("Property mappings")
+			.setName(strings.propertyMappings)
 			.setHeading();
 
 		profile.propertyMappings.forEach((mapping, mappingIndex) => {
 			new Setting(section)
-				.setName(`Mapping ${mappingIndex + 1}`)
+				.setName(strings.mapping(mappingIndex + 1))
 				.addText((text) => text
-					.setPlaceholder("Frontmatter key")
+					.setPlaceholder(strings.frontmatterKeyPlaceholder)
 					.setValue(mapping.obsidianKey)
 					.onChange(async (value) => {
 						mapping.obsidianKey = value.trim();
 						await this.plugin.saveSettings();
 					}))
 				.addDropdown((dropdown) => {
-					dropdown.addOption("", "Select a property");
+					dropdown.addOption("", strings.selectNotionProperty);
 					for (const propertyName of new Set([
 						...profile.notionProperties,
 						...(mapping.notionProperty ? [mapping.notionProperty] : []),
@@ -170,7 +175,7 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				})
 				.addExtraButton((button) => button
 					.setIcon("trash")
-					.setTooltip("Remove mapping")
+					.setTooltip(strings.removeMapping)
 					.onClick(async () => {
 						profile.propertyMappings.splice(mappingIndex, 1);
 						await this.plugin.saveSettings();
@@ -179,10 +184,10 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 		});
 
 		new Setting(section)
-			.setName("Add property mapping")
-			.setDesc("Map a frontmatter key to a Notion property.")
+			.setName(strings.addPropertyMapping)
+			.setDesc(strings.mapFrontmatterKeyToNotionProperty)
 			.addButton((button) => button
-				.setButtonText("Add mapping")
+				.setButtonText(strings.addMapping)
 				.onClick(async () => {
 					profile.propertyMappings.push({
 						direction: "bidirectional",

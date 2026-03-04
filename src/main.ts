@@ -1,6 +1,7 @@
 import { Notice, Plugin, type TFile } from "obsidian";
 
 import { registerCommands } from "./commands";
+import { getStrings } from "./i18n";
 import { createNotionClientFactory, NotionApiRepository } from "./notion/notion-api-repository";
 import { VaultDocumentRepository } from "./obsidian/vault-document-repository";
 import {
@@ -25,9 +26,10 @@ export default class NotionSyncPlugin extends Plugin {
 		await this.loadSettings();
 		this.notionRepository = this.createNotionRepository();
 		this.syncService = this.createSyncService();
+		const strings = getStrings();
 
 		registerCommands(this);
-		this.addRibbonIcon("refresh-cw", "Sync active note database", () => {
+		this.addRibbonIcon("refresh-cw", strings.ribbonSyncActiveNoteDatabase, () => {
 			void this.syncActiveFile(true);
 		});
 		this.addSettingTab(new NotionSyncSettingTab(this.app, this));
@@ -43,17 +45,18 @@ export default class NotionSyncPlugin extends Plugin {
 	}
 
 	async fetchDatabaseProperties(profileId: string): Promise<string[]> {
+		const strings = getStrings();
 		if (!this.settings.notionToken.trim()) {
-			throw new Error("Configure a Notion integration token in plugin settings first.");
+			throw new Error(strings.configureTokenFirst);
 		}
 
 		const profile = this.settings.databases.find((entry) => entry.id === profileId);
 		if (!profile) {
-			throw new Error("Selected Notion database profile is not available.");
+			throw new Error(strings.selectedProfileUnavailable);
 		}
 
 		if (!profile.databaseId.trim()) {
-			throw new Error("Enter a Notion database ID before fetching properties.");
+			throw new Error(strings.enterDatabaseIdBeforeFetchingProperties);
 		}
 
 		const schema = await (this.notionRepository ?? this.createNotionRepository())
@@ -65,17 +68,27 @@ export default class NotionSyncPlugin extends Plugin {
 	}
 
 	async syncActiveFile(notify: boolean): Promise<SyncSummary | null> {
-		return this.runActiveFileAction(notify, (path, databaseId) => this.syncService?.syncFile(path, databaseId));
+		return this.runActiveFileAction(
+			notify,
+			"sync",
+			(path, databaseId) => this.syncService?.syncFile(path, databaseId),
+		);
 	}
 
 	async pullActiveFileFromNotion(notify: boolean): Promise<SyncSummary | null> {
-		return this.runActiveFileAction(notify, (path, databaseId) => this.syncService?.pullFile(path, databaseId));
+		return this.runActiveFileAction(
+			notify,
+			"pull",
+			(path, databaseId) => this.syncService?.pullFile(path, databaseId),
+		);
 	}
 
 	private async runActiveFileAction(
 		notify: boolean,
+		action: "pull" | "sync",
 		execute: (path: string, databaseId: string) => Promise<{ status: "success"; summary: SyncSummary; } | { status: "skipped"; message: string; reason: string; } | undefined> | undefined,
 	): Promise<SyncSummary | null> {
+		const strings = getStrings();
 		if (!this.ensureTokenConfigured(notify) || !this.syncService) {
 			return null;
 		}
@@ -83,7 +96,7 @@ export default class NotionSyncPlugin extends Plugin {
 		const file = this.app.workspace.getActiveFile();
 		if (!this.isMarkdownFile(file)) {
 			if (notify) {
-				new Notice("Open a Markdown note to sync.");
+				new Notice(strings.openMarkdownNote);
 			}
 			return null;
 		}
@@ -91,7 +104,7 @@ export default class NotionSyncPlugin extends Plugin {
 		const databases = this.getConfiguredDatabases();
 		if (databases.length === 0) {
 			if (notify) {
-				new Notice("Add at least one Notion database in plugin settings first.");
+				new Notice(strings.noConfiguredDatabases);
 			}
 			return null;
 		}
@@ -114,13 +127,20 @@ export default class NotionSyncPlugin extends Plugin {
 			}
 
 			if (notify) {
-				new Notice(this.formatSummary(`Synced ${database.name || "database"}`, result.summary));
+				new Notice(this.formatSummary(
+					action === "pull"
+						? strings.pullSummary(database.name || strings.selectedDatabaseFallback)
+						: strings.syncSummary(database.name || strings.selectedDatabaseFallback),
+					result.summary,
+				));
 			}
 			return result.summary;
 		} catch (error) {
 			this.handleSyncError(
 				error,
-				`Failed to sync ${file.path} with ${this.describeDatabaseSelection(databases)}`,
+				action === "pull"
+					? strings.failedToPull(file.path, this.describeDatabaseSelection(databases))
+					: strings.failedToSync(file.path, this.describeDatabaseSelection(databases)),
 				notify,
 			);
 			return null;
@@ -156,19 +176,25 @@ export default class NotionSyncPlugin extends Plugin {
 	}
 
 	private ensureTokenConfigured(notify: boolean): boolean {
+		const strings = getStrings();
 		if (this.settings.notionToken.trim()) {
 			return true;
 		}
 
 		if (notify) {
-			new Notice("Configure a Notion integration token in plugin settings first.");
+			new Notice(strings.configureTokenFirst);
 		}
 		return false;
 	}
 
 	private formatSummary(prefix: string, summary: SyncSummary): string {
-		return `${prefix}: +${summary.createdRemotePages} remote, +${summary.createdLocalDocuments} local, `
-			+ `~${summary.updatedRemotePages} remote, ~${summary.updatedLocalDocuments} local.`;
+		return getStrings().summary(
+			prefix,
+			summary.createdRemotePages,
+			summary.createdLocalDocuments,
+			summary.updatedRemotePages,
+			summary.updatedLocalDocuments,
+		);
 	}
 
 	private handleSyncError(error: unknown, message: string, notify: boolean): void {
@@ -179,12 +205,13 @@ export default class NotionSyncPlugin extends Plugin {
 	}
 
 	private describeDatabaseSelection(databases: DatabaseSyncSetting[]): string {
+		const strings = getStrings();
 		if (databases.length === 1) {
 			const database = databases[0];
-			return database?.name || database?.databaseId || "selected database";
+			return database?.name || database?.databaseId || strings.selectedDatabaseFallback;
 		}
 
-		return "selected database";
+		return strings.selectedDatabaseFallback;
 	}
 
 	private describeSyncError(message: string, error: unknown): string {

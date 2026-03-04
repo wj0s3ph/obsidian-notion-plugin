@@ -125,6 +125,7 @@ vi.mock("obsidian", () => {
 
 	return {
 		FuzzySuggestModal,
+		getLanguage: () => "en",
 		Notice,
 		Plugin,
 		PluginSettingTab,

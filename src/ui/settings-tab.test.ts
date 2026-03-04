@@ -164,6 +164,7 @@ vi.mock("obsidian", () => {
 	}
 
 	return {
+		getLanguage: () => "en",
 		Notice,
 		PluginSettingTab,
 		Setting,

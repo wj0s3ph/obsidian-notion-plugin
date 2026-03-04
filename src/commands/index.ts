@@ -1,11 +1,14 @@
 import type { TFile } from "obsidian";
 
+import { getStrings } from "../i18n";
 import type NotionSyncPlugin from "../main";
 
 export function registerCommands(plugin: NotionSyncPlugin): void {
+	const strings = getStrings();
+
 	plugin.addCommand({
 		id: "sync-active-note-database",
-		name: "Sync active note database",
+		name: strings.commandSyncActiveNoteDatabase,
 		checkCallback: (checking) => {
 			const file = plugin.app.workspace.getActiveFile();
 			if (!isMarkdownFile(file)) {
@@ -22,7 +25,7 @@ export function registerCommands(plugin: NotionSyncPlugin): void {
 
 	plugin.addCommand({
 		id: "pull-active-note-from-notion",
-		name: "Pull active note from Notion",
+		name: strings.commandPullActiveNoteFromNotion,
 		checkCallback: (checking) => {
 			const file = plugin.app.workspace.getActiveFile();
 			if (!isMarkdownFile(file)) {

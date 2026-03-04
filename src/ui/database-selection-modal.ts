@@ -1,5 +1,6 @@
 import { FuzzySuggestModal, type App } from "obsidian";
 
+import { getStrings } from "../i18n";
 import type { DatabaseSyncSetting } from "../settings";
 
 export function chooseDatabase(
@@ -20,7 +21,7 @@ class DatabaseSelectionModal extends FuzzySuggestModal<DatabaseSyncSetting> {
 		private readonly onResolve: (database: DatabaseSyncSetting | null) => void,
 	) {
 		super(app);
-		this.setPlaceholder("Select a Notion database");
+		this.setPlaceholder(getStrings().selectDatabasePlaceholder);
 	}
 
 	getItems(): DatabaseSyncSetting[] {
