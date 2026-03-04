@@ -13,18 +13,10 @@ export function registerCommands(plugin: NotionSyncPlugin): void {
 			}
 
 			if (!checking) {
-				void plugin.syncFilePath(file.path, true);
+				void plugin.syncActiveFile(true);
 			}
 
 			return true;
-		},
-	});
-
-	plugin.addCommand({
-		id: "sync-all-configured-databases",
-		name: "Sync all configured databases",
-		callback: () => {
-			void plugin.syncAllDatabases(true);
 		},
 	});
 }

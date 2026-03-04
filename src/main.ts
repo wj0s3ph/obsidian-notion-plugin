@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFile } from "obsidian";
+import { Notice, Plugin, type TFile } from "obsidian";
 
 import { registerCommands } from "./commands";
 import { createNotionClientFactory, NotionApiRepository } from "./notion/notion-api-repository";
@@ -6,49 +6,29 @@ import { VaultDocumentRepository } from "./obsidian/vault-document-repository";
 import {
 	coercePersistedSettings,
 	DEFAULT_SETTINGS,
+	type DatabaseSyncSetting,
 	type NotionSyncPluginSettings,
 	normalizeSettings,
 } from "./settings";
 import { type SyncSummary } from "./sync/engine";
 import { SyncService } from "./sync/sync-service";
+import { chooseDatabase } from "./ui/database-selection-modal";
 import { NotionSyncSettingTab } from "./ui/settings-tab";
 
 export default class NotionSyncPlugin extends Plugin {
 	settings: NotionSyncPluginSettings = DEFAULT_SETTINGS;
 
-	private readonly pendingFileSyncs = new Map<string, number>();
-
 	private syncService: SyncService | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
-		this.syncService = new SyncService({
-			getSettings: () => this.settings,
-			localRepository: new VaultDocumentRepository(this.app.vault),
-			notionRepository: new NotionApiRepository(
-				createNotionClientFactory(() => this.settings.notionToken),
-			),
-		});
+		this.syncService = this.createSyncService();
 
 		registerCommands(this);
+		this.addRibbonIcon("refresh-cw", "Sync active note database", () => {
+			void this.syncActiveFile(true);
+		});
 		this.addSettingTab(new NotionSyncSettingTab(this.app, this));
-		this.registerEvent(this.app.vault.on("create", (file) => {
-			if (file instanceof TFile) {
-				this.handleVaultChange(file);
-			}
-		}));
-		this.registerEvent(this.app.vault.on("modify", (file) => {
-			if (file instanceof TFile) {
-				this.handleVaultChange(file);
-			}
-		}));
-		this.registerInterval(window.setInterval(() => {
-			void this.syncDueProfiles();
-		}, 30_000));
-
-		if (this.settings.syncOnStartup) {
-			void this.syncAllDatabases(false);
-		}
 	}
 
 	async loadSettings(): Promise<void> {
@@ -60,53 +40,63 @@ export default class NotionSyncPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	onunload(): void {
-		for (const timeout of this.pendingFileSyncs.values()) {
-			window.clearTimeout(timeout);
-		}
-
-		this.pendingFileSyncs.clear();
-	}
-
-	async syncAllDatabases(notify: boolean): Promise<SyncSummary | null> {
+	async syncActiveFile(notify: boolean): Promise<SyncSummary | null> {
 		if (!this.ensureTokenConfigured(notify) || !this.syncService) {
 			return null;
 		}
 
-		try {
-			const summary = await this.syncService.syncAll();
+		const file = this.app.workspace.getActiveFile();
+		if (!this.isMarkdownFile(file)) {
 			if (notify) {
-				new Notice(this.formatSummary("Synced databases", summary));
+				new Notice("Open a Markdown note to sync.");
 			}
-			return summary;
-		} catch (error) {
-			this.handleSyncError(error, "Failed to sync all databases", notify);
 			return null;
 		}
-	}
 
-	async syncFilePath(path: string, notify: boolean): Promise<SyncSummary | null> {
-		if (!this.ensureTokenConfigured(notify) || !this.syncService) {
+		const databases = this.getConfiguredDatabases();
+		if (databases.length === 0) {
+			if (notify) {
+				new Notice("Add at least one Notion database in plugin settings first.");
+			}
 			return null;
 		}
 
 		try {
-			const summary = await this.syncService.syncFile(path);
+			const database = await this.chooseDatabase(databases);
+			if (!database) {
+				return null;
+			}
+
+			const summary = await this.syncService.syncFile(file.path, database.id);
 			if (!summary) {
 				if (notify) {
-					new Notice("No matching sync profile for the active note.");
+					new Notice("Unable to sync the active note with the selected database.");
 				}
 				return null;
 			}
 
 			if (notify) {
-				new Notice(this.formatSummary("Synced note profile", summary));
+				new Notice(this.formatSummary(`Synced ${database.name || "database"}`, summary));
 			}
 			return summary;
 		} catch (error) {
-			this.handleSyncError(error, `Failed to sync ${path}`, notify);
+			this.handleSyncError(error, `Failed to sync ${file.path}`, notify);
 			return null;
 		}
+	}
+
+	protected createSyncService(): SyncService {
+		return new SyncService({
+			getSettings: () => this.settings,
+			localRepository: new VaultDocumentRepository(this.app.vault),
+			notionRepository: new NotionApiRepository(
+				createNotionClientFactory(() => this.settings.notionToken),
+			),
+		});
+	}
+
+	protected chooseDatabase(databases: DatabaseSyncSetting[]): Promise<DatabaseSyncSetting | null> {
+		return chooseDatabase(this.app, databases);
 	}
 
 	private ensureTokenConfigured(notify: boolean): boolean {
@@ -132,33 +122,11 @@ export default class NotionSyncPlugin extends Plugin {
 		}
 	}
 
-	private handleVaultChange(file: TFile): void {
-		if (file.extension !== "md") {
-			return;
-		}
-
-		const existingTimeout = this.pendingFileSyncs.get(file.path);
-		if (existingTimeout !== undefined) {
-			window.clearTimeout(existingTimeout);
-		}
-
-		const timeout = window.setTimeout(() => {
-			this.pendingFileSyncs.delete(file.path);
-			void this.syncFilePath(file.path, false);
-		}, 1000);
-
-		this.pendingFileSyncs.set(file.path, timeout);
+	private getConfiguredDatabases(): DatabaseSyncSetting[] {
+		return this.settings.databases.filter((database) => database.databaseId.trim());
 	}
 
-	private async syncDueProfiles(): Promise<void> {
-		if (!this.ensureTokenConfigured(false) || !this.syncService) {
-			return;
-		}
-
-		try {
-			await this.syncService.syncDueProfiles();
-		} catch (error) {
-			this.handleSyncError(error, "Background sync failed", false);
-		}
+	private isMarkdownFile(file: TFile | null): file is TFile {
+		return Boolean(file && file.extension === "md");
 	}
 }

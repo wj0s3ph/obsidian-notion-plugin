@@ -39,16 +39,6 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Sync on startup")
-			.setDesc("Run a full sync when the plugin loads.")
-			.addToggle((toggle) => toggle
-				.setValue(this.plugin.settings.syncOnStartup)
-				.onChange(async (value) => {
-					this.plugin.settings.syncOnStartup = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
 			.setName("Database profiles")
 			.setHeading();
 
@@ -58,7 +48,7 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Add database profile")
-			.setDesc("Create another folder-to-Notion sync profile.")
+			.setDesc("Create another Notion database profile.")
 			.addButton((button) => button
 				.setButtonText("Add profile")
 				.onClick(async () => {
@@ -83,14 +73,6 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 			.setHeading();
 
 		new Setting(section)
-			.setName("Enabled")
-			.setDesc("Allow this profile to participate in automatic and manual sync.")
-			.addToggle((toggle) => toggle
-				.setValue(profile.enabled)
-				.onChange(async (value) => {
-					profile.enabled = value;
-					await this.plugin.saveSettings();
-				}))
 			.addExtraButton((button) => button
 				.setIcon("trash")
 				.setTooltip("Remove profile")
@@ -107,17 +89,6 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				.setValue(profile.name)
 				.onChange(async (value) => {
 					profile.name = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(section)
-			.setName("Vault folder")
-			.setDesc("Only notes under this folder are synced.")
-			.addText((text) => text
-				.setPlaceholder("Projects")
-				.setValue(profile.folder)
-				.onChange(async (value) => {
-					profile.folder = value.trim().replace(/^\/+|\/+$/g, "");
 					await this.plugin.saveSettings();
 				}));
 
@@ -149,18 +120,6 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 				.setValue(profile.notionPageIdField)
 				.onChange(async (value) => {
 					profile.notionPageIdField = value.trim() || "notionPageId";
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(section)
-			.setName("Remote poll interval")
-			.setDesc("Seconds between automatic Notion pull checks for this profile.")
-			.addText((text) => text
-				.setPlaceholder("300")
-				.setValue(String(profile.syncIntervalSeconds))
-				.onChange(async (value) => {
-					const parsed = Number.parseInt(value, 10);
-					profile.syncIntervalSeconds = Number.isFinite(parsed) && parsed > 0 ? parsed : 300;
 					await this.plugin.saveSettings();
 				}));
 

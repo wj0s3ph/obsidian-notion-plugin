@@ -1,84 +1,39 @@
 import type { DatabaseSyncSetting, NotionSyncPluginSettings } from "../settings";
 import type { LocalDocumentRepository, NotionRepository, SyncSummary } from "./engine";
-import { syncDatabaseProfiles } from "./engine";
+import { syncDatabaseFile } from "./engine";
 
 export interface SyncServiceOptions {
 	getSettings: () => NotionSyncPluginSettings;
 	localRepository: LocalDocumentRepository;
 	notionRepository: NotionRepository;
-	now?: () => number;
 }
 
 export class SyncService {
-	private readonly getCurrentTime: () => number;
+	constructor(private readonly options: SyncServiceOptions) {}
 
-	private readonly lastSyncedAtByProfileId = new Map<string, number>();
-
-	constructor(private readonly options: SyncServiceOptions) {
-		this.getCurrentTime = options.now ?? Date.now;
-	}
-
-	async syncAll(): Promise<SyncSummary> {
-		const profiles = this.getEnabledProfiles();
-		const summary = await this.syncProfiles(profiles);
-		this.markProfilesSynced(profiles);
-		return summary;
-	}
-
-	async syncDueProfiles(): Promise<SyncSummary> {
-		const now = this.getCurrentTime();
-		const profiles = this.getEnabledProfiles().filter((profile) => {
-			const lastSyncedAt = this.lastSyncedAtByProfileId.get(profile.id);
-			if (lastSyncedAt === undefined) {
-				return true;
-			}
-
-			return now - lastSyncedAt >= profile.syncIntervalSeconds * 1000;
-		});
-
-		const summary = await this.syncProfiles(profiles);
-		this.markProfilesSynced(profiles, now);
-		return summary;
-	}
-
-	async syncFile(path: string): Promise<SyncSummary | null> {
-		const profiles = this.getEnabledProfiles().filter((profile) => matchesProfileFolder(profile, path));
-		if (profiles.length === 0) {
+	async syncFile(path: string, profileId: string): Promise<SyncSummary | null> {
+		const profile = this.getConfiguredProfiles().find((entry) => entry.id === profileId);
+		if (!profile) {
 			return null;
 		}
 
-		const summary = await this.syncProfiles(profiles);
-		this.markProfilesSynced(profiles);
-		return summary;
+		const document = await this.options.localRepository.readDocument(path);
+		if (!document) {
+			return null;
+		}
+
+		return syncDatabaseFile(profile, path, {
+			localRepository: this.options.localRepository,
+			notionRepository: this.options.notionRepository,
+		});
 	}
 
-	private getEnabledProfiles(): DatabaseSyncSetting[] {
+	private getConfiguredProfiles(): DatabaseSyncSetting[] {
 		const settings = this.options.getSettings();
 		if (!settings.notionToken.trim()) {
 			return [];
 		}
 
-		return settings.databases.filter((profile) => profile.enabled);
+		return settings.databases.filter((profile) => profile.databaseId.trim());
 	}
-
-	private markProfilesSynced(profiles: DatabaseSyncSetting[], timestamp = this.getCurrentTime()): void {
-		for (const profile of profiles) {
-			this.lastSyncedAtByProfileId.set(profile.id, timestamp);
-		}
-	}
-
-	private syncProfiles(profiles: DatabaseSyncSetting[]): Promise<SyncSummary> {
-		return syncDatabaseProfiles(profiles, {
-			localRepository: this.options.localRepository,
-			notionRepository: this.options.notionRepository,
-		});
-	}
-}
-
-function matchesProfileFolder(profile: DatabaseSyncSetting, path: string): boolean {
-	if (!profile.folder) {
-		return false;
-	}
-
-	return path === profile.folder || path.startsWith(`${profile.folder}/`);
 }

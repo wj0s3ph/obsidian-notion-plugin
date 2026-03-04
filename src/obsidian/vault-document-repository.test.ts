@@ -61,7 +61,7 @@ class FakeVault {
 }
 
 describe("VaultDocumentRepository", () => {
-	it("lists markdown notes from a configured folder", async () => {
+	it("reads a single markdown note by path", async () => {
 		const vault = new FakeVault();
 		vault.files.set("Tasks/launch.md", {
 			data: `---
@@ -77,15 +77,27 @@ status: Todo
 		});
 		const repository = new VaultDocumentRepository(vault as never);
 
-		const documents = await repository.listDocuments("Tasks");
+		const document = await repository.readDocument("Tasks/launch.md");
 
-		expect(documents).toEqual([{
+		expect(document).toEqual({
 			content: "# Launch\n",
 			frontmatter: { status: "Todo" },
 			lastEditedTime: "2026-03-04T10:00:00.000Z",
 			path: "Tasks/launch.md",
 			title: "launch",
-		}]);
+		});
+	});
+
+	it("returns null for missing or non-markdown paths", async () => {
+		const vault = new FakeVault();
+		vault.files.set("Tasks/launch.md", {
+			data: "# Launch\n",
+			mtime: Date.parse("2026-03-04T10:00:00.000Z"),
+		});
+		const repository = new VaultDocumentRepository(vault as never);
+
+		await expect(repository.readDocument("Tasks/missing.md")).resolves.toBeNull();
+		await expect(repository.readDocument("Tasks")).resolves.toBeNull();
 	});
 
 	it("creates missing folders and writes markdown documents", async () => {
