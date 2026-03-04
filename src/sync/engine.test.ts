@@ -186,6 +186,40 @@ function materializePropertyState(
 }
 
 describe("syncDatabaseProfiles", () => {
+	it("skips disabled profiles and profiles without a database id", async () => {
+		const local = new InMemoryLocalRepository([]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [],
+				schema: {
+					Name: "title",
+				},
+			},
+		});
+
+		const summary = await syncDatabaseProfiles([
+			createProfile({
+				databaseId: "",
+			}),
+			createProfile({
+				databaseId: "db-1",
+				enabled: false,
+			}),
+		], {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(summary).toMatchObject({
+			createdLocalDocuments: 0,
+			createdRemotePages: 0,
+			skipped: 2,
+			updatedLocalDocuments: 0,
+			updatedRemotePages: 0,
+		});
+	});
+
 	it("creates a Notion page for an unlinked local note and stores the page id", async () => {
 		const profile = createProfile({});
 		const local = new InMemoryLocalRepository([{
@@ -263,6 +297,47 @@ describe("syncDatabaseProfiles", () => {
 		expect(updatedPage?.page.properties.Status?.value).toBe("In progress");
 	});
 
+	it("updates a linked Notion page when only mapped properties change", async () => {
+		const profile = createProfile({});
+		const local = new InMemoryLocalRepository([{
+			content: "# Launch",
+			frontmatter: {
+				notionPageId: "page-1",
+				status: "In progress",
+			},
+			lastEditedTime: "2026-03-04T10:15:00.000Z",
+			path: "Tasks/launch.md",
+			title: "Launch",
+		}]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [{
+					id: "page-1",
+					lastEditedTime: "2026-03-04T10:05:00.000Z",
+					markdown: "# Launch",
+					properties: {
+						Name: { type: "title", value: "Launch" },
+						Status: { type: "status", value: "Todo" },
+					},
+					title: "Launch",
+				}],
+				schema: {
+					Name: "title",
+					Status: "status",
+				},
+			},
+		});
+
+		const summary = await syncDatabaseProfiles([profile], {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(summary.updatedRemotePages).toBe(1);
+		expect(notion.updatedPages[0]?.page.properties.Status?.value).toBe("In progress");
+	});
+
 	it("pulls newer remote changes into the local note and skips read-only properties", async () => {
 		const profile = createProfile({
 			propertyMappings: [
@@ -324,6 +399,79 @@ describe("syncDatabaseProfiles", () => {
 			},
 		});
 		expect(local.getDocument("Tasks/launch.md")?.frontmatter.createdAt).toBeUndefined();
+	});
+
+	it("pulls newer remote properties even when the markdown body is unchanged", async () => {
+		const profile = createProfile({});
+		const local = new InMemoryLocalRepository([{
+			content: "# Launch",
+			frontmatter: {
+				notionPageId: "page-1",
+				status: "Todo",
+			},
+			lastEditedTime: "2026-03-04T10:00:00.000Z",
+			path: "Tasks/launch.md",
+			title: "Launch",
+		}]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [{
+					id: "page-1",
+					lastEditedTime: "2026-03-04T10:20:00.000Z",
+					markdown: "# Launch",
+					properties: {
+						Name: { type: "title", value: "Launch" },
+						Status: { type: "status", value: "Done" },
+					},
+					title: "Launch",
+				}],
+				schema: {
+					Name: "title",
+					Status: "status",
+				},
+			},
+		});
+
+		const summary = await syncDatabaseProfiles([profile], {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(summary.updatedLocalDocuments).toBe(1);
+		expect(local.getDocument("Tasks/launch.md")?.frontmatter.status).toBe("Done");
+	});
+
+	it("creates a replacement remote page when a linked page no longer exists", async () => {
+		const profile = createProfile({});
+		const local = new InMemoryLocalRepository([{
+			content: "# Launch",
+			frontmatter: {
+				notionPageId: "page-missing",
+				status: "Todo",
+			},
+			lastEditedTime: "2026-03-04T10:10:00.000Z",
+			path: "Tasks/launch.md",
+			title: "Launch",
+		}]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [],
+				schema: {
+					Name: "title",
+					Status: "status",
+				},
+			},
+		});
+
+		const summary = await syncDatabaseProfiles([profile], {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(summary.createdRemotePages).toBe(1);
+		expect(local.getDocument("Tasks/launch.md")?.frontmatter.notionPageId).toBe("page-1");
 	});
 
 	it("imports remote-only pages into the matching configured folder across databases", async () => {
@@ -389,6 +537,139 @@ describe("syncDatabaseProfiles", () => {
 		expect(noteDocument).toMatchObject({
 			content: "# Remote note",
 			path: "Notes/remote-note.md",
+		});
+	});
+
+	it("skips writes when local and remote state already match", async () => {
+		const profile = createProfile({});
+		const local = new InMemoryLocalRepository([{
+			content: "# Launch",
+			frontmatter: {
+				notionPageId: "page-1",
+				status: "Todo",
+			},
+			lastEditedTime: "2026-03-04T10:00:00.000Z",
+			path: "Tasks/launch.md",
+			title: "Launch",
+		}]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [{
+					id: "page-1",
+					lastEditedTime: "2026-03-04T10:00:00.000Z",
+					markdown: "# Launch",
+					properties: {
+						Name: { type: "title", value: "Launch" },
+						Status: { type: "status", value: "Todo" },
+					},
+					title: "Launch",
+				}],
+				schema: {
+					Name: "title",
+					Status: "status",
+				},
+			},
+		});
+
+		const summary = await syncDatabaseProfiles([profile], {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(summary.skipped).toBe(1);
+		expect(notion.createdPages).toHaveLength(0);
+		expect(notion.updatedPages).toHaveLength(0);
+	});
+
+	it("deduplicates imported note paths when multiple remote pages share a title", async () => {
+		const profile = createProfile({});
+		const local = new InMemoryLocalRepository([{
+			content: "# Existing",
+			frontmatter: {
+				notionPageId: "page-existing",
+				status: "Todo",
+			},
+			lastEditedTime: "2026-03-04T10:00:00.000Z",
+			path: "Tasks/remote-task.md",
+			title: "remote-task",
+		}]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [
+					{
+						id: "page-existing",
+						lastEditedTime: "2026-03-04T10:00:00.000Z",
+						markdown: "# Existing",
+						properties: {
+							Name: { type: "title", value: "remote-task" },
+							Status: { type: "status", value: "Todo" },
+						},
+						title: "remote-task",
+					},
+					{
+						id: "page-1",
+						lastEditedTime: "2026-03-04T10:20:00.000Z",
+						markdown: "# Remote task",
+						properties: {
+							Name: { type: "title", value: "Remote task" },
+							Status: { type: "status", value: "Todo" },
+						},
+						title: "Remote task",
+					},
+				],
+				schema: {
+					Name: "title",
+					Status: "status",
+				},
+			},
+		});
+
+		await syncDatabaseProfiles([profile], {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(local.getDocument("Tasks/remote-task-2.md")).toMatchObject({
+			content: "# Remote task",
+			frontmatter: {
+				notionPageId: "page-1",
+				status: "Todo",
+			},
+		});
+	});
+
+	it("falls back to an untitled file name when the remote title has no slug characters", async () => {
+		const profile = createProfile({});
+		const local = new InMemoryLocalRepository([]);
+		const notion = new InMemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [{
+					id: "page-1",
+					lastEditedTime: "2026-03-04T10:20:00.000Z",
+					markdown: "# Remote task",
+					properties: {
+						Name: { type: "title", value: "!!!" },
+						Status: { type: "status", value: "Todo" },
+					},
+					title: "!!!",
+				}],
+				schema: {
+					Name: "title",
+					Status: "status",
+				},
+			},
+		});
+
+		await syncDatabaseProfiles([profile], {
+			localRepository: local,
+			notionRepository: notion,
+		});
+
+		expect(local.getDocument("Tasks/untitled.md")).toMatchObject({
+			content: "# Remote task",
 		});
 	});
 });

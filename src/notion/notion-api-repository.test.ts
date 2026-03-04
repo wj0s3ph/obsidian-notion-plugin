@@ -6,35 +6,60 @@ describe("NotionApiRepository", () => {
 	it("hydrates a database snapshot with schema, markdown and normalized properties", async () => {
 		const repository = new NotionApiRepository(() => ({
 			dataSources: {
-				query: async () => ({
-					has_more: false,
-					next_cursor: null,
-					results: [{
-						id: "page-1",
-						last_edited_time: "2026-03-04T10:00:00.000Z",
+				query: async (input) => ({
+					has_more: input.start_cursor !== "cursor-1",
+					next_cursor: input.start_cursor ? null : "cursor-1",
+					results: input.start_cursor ? [{
+						id: "page-2",
+						last_edited_time: "2026-03-04T10:05:00.000Z",
 						object: "page",
 						properties: {
+							Created: {
+								created_time: "2026-03-04T08:00:00.000Z",
+								type: "created_time",
+							},
 							Name: {
-								title: [{ plain_text: "Launch" }],
+								title: [{ plain_text: "Second" }],
 								type: "title",
 							},
-							Status: {
-								status: { name: "Todo" },
-								type: "status",
+							Tags: {
+								multi_select: [{ name: "alpha" }, { name: "beta" }],
+								type: "multi_select",
 							},
 						},
-					}],
+					}] : [
+						{
+							object: "data_source",
+						},
+						{
+							id: "page-1",
+							last_edited_time: "2026-03-04T10:00:00.000Z",
+							object: "page",
+							properties: {
+								Name: {
+									title: [{ plain_text: "Launch" }],
+									type: "title",
+								},
+								Status: {
+									status: { name: "Todo" },
+									type: "status",
+								},
+							},
+						},
+					],
 				}),
 				retrieve: async () => ({
 					properties: {
+						Created: { type: "created_time" },
 						Name: { type: "title" },
 						Status: { type: "status" },
+						Tags: { type: "multi_select" },
 					},
 				}),
 			},
 			pages: {
-				retrieveMarkdown: async () => ({
-					markdown: "# Launch",
+				retrieveMarkdown: async (input) => ({
+					markdown: input.page_id === "page-2" ? "# Second" : "# Launch",
 				}),
 			},
 		}));
@@ -58,10 +83,31 @@ describe("NotionApiRepository", () => {
 					},
 				},
 				title: "Launch",
+			}, {
+				id: "page-2",
+				lastEditedTime: "2026-03-04T10:05:00.000Z",
+				markdown: "# Second",
+				properties: {
+					Created: {
+						type: "created_time",
+						value: "2026-03-04T08:00:00.000Z",
+					},
+					Name: {
+						type: "title",
+						value: "Second",
+					},
+					Tags: {
+						type: "multi_select",
+						value: ["alpha", "beta"],
+					},
+				},
+				title: "Second",
 			}],
 			schema: {
+				Created: "created_time",
 				Name: "title",
 				Status: "status",
+				Tags: "multi_select",
 			},
 		});
 	});
@@ -182,5 +228,133 @@ describe("NotionApiRepository", () => {
 				type: "replace_content_range",
 			},
 		]);
+	});
+
+	it("throws when the client does not expose write methods", async () => {
+		const repository = new NotionApiRepository(() => ({
+			dataSources: {
+				query: async () => ({ has_more: false, next_cursor: null, results: [] }),
+				retrieve: async () => ({ properties: {} }),
+			},
+			pages: {
+				retrieveMarkdown: async () => ({ markdown: "" }),
+			},
+		}));
+
+		await expect(repository.createPage({
+			databaseId: "db-1",
+			markdown: "# Launch",
+			properties: {},
+			title: "Launch",
+			titleProperty: "Name",
+		})).rejects.toThrow("Notion client does not support page creation");
+		await expect(repository.updatePage({
+			markdown: "# Launch",
+			pageId: "page-1",
+			properties: {},
+			title: "Launch",
+			titleProperty: "Name",
+		})).rejects.toThrow("Notion client does not support page updates");
+	});
+
+	it("normalizes additional property types and falls back to Untitled when no title exists", async () => {
+		const repository = new NotionApiRepository(() => ({
+			dataSources: {
+				query: async () => ({
+					has_more: false,
+					next_cursor: null,
+					results: [{
+						id: "page-1",
+						last_edited_time: "2026-03-04T10:00:00.000Z",
+						object: "page",
+						properties: {
+							Check: {
+								checkbox: true,
+								type: "checkbox",
+							},
+							Choice: {
+								select: { name: "Feature" },
+								type: "select",
+							},
+							Date: {
+								date: { start: "2026-03-04" },
+								type: "date",
+							},
+							Notes: {
+								rich_text: [{ text: { content: "Hello" } }],
+								type: "rich_text",
+							},
+							Phone: {
+								phone_number: "123",
+								type: "phone_number",
+							},
+							Score: {
+								number: 42,
+								type: "number",
+							},
+							Unknown: {
+								type: "mystery",
+								mystery: "raw",
+							},
+						},
+					}],
+				}),
+				retrieve: async () => ({
+					properties: {
+						Check: { type: "checkbox" },
+						Choice: { type: "select" },
+						Date: { type: "date" },
+						Notes: { type: "rich_text" },
+						Phone: { type: "phone_number" },
+						Score: { type: "number" },
+						Unknown: { type: "mystery" },
+					},
+				}),
+			},
+			pages: {
+				retrieveMarkdown: async () => ({
+					markdown: "# Untitled",
+				}),
+			},
+		}));
+
+		const snapshot = await repository.getDatabaseSnapshot("db-1");
+
+		expect(snapshot.pages[0]).toEqual({
+			id: "page-1",
+			lastEditedTime: "2026-03-04T10:00:00.000Z",
+			markdown: "# Untitled",
+			properties: {
+				Check: {
+					type: "checkbox",
+					value: true,
+				},
+				Choice: {
+					type: "select",
+					value: "Feature",
+				},
+				Date: {
+					type: "date",
+					value: "2026-03-04",
+				},
+				Notes: {
+					type: "rich_text",
+					value: "Hello",
+				},
+				Phone: {
+					type: "phone_number",
+					value: "123",
+				},
+				Score: {
+					type: "number",
+					value: 42,
+				},
+				Unknown: {
+					type: "mystery",
+					value: "raw",
+				},
+			},
+			title: "Untitled",
+		});
 	});
 });

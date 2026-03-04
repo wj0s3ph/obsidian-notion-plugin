@@ -223,4 +223,57 @@ describe("SyncService", () => {
 		const unmatchedSummary = await service.syncFile("Inbox/random.md");
 		expect(unmatchedSummary).toBeNull();
 	});
+
+	it("skips work when the integration token is missing or polls are not due", async () => {
+		const localRepository = new MemoryLocalRepository([]);
+		const notionRepository = new MemoryNotionRepository({
+			"db-1": {
+				databaseId: "db-1",
+				pages: [],
+				schema: {
+					Name: "title",
+				},
+			},
+		});
+		let now = Date.parse("2026-03-04T10:20:00.000Z");
+		const service = new SyncService({
+			getSettings: () => createSettings([
+				createProfile({
+					syncIntervalSeconds: 120,
+				}),
+			]),
+			localRepository,
+			notionRepository,
+			now: () => now,
+		});
+		const withoutToken = new SyncService({
+			getSettings: () => ({
+				...createSettings([createProfile({})]),
+				notionToken: "",
+			}),
+			localRepository,
+			notionRepository,
+			now: () => now,
+		});
+
+		expect(await withoutToken.syncAll()).toEqual({
+			createdLocalDocuments: 0,
+			createdRemotePages: 0,
+			skipped: 0,
+			updatedLocalDocuments: 0,
+			updatedRemotePages: 0,
+		});
+		expect(await withoutToken.syncFile("Tasks/launch.md")).toBeNull();
+
+		await service.syncAll();
+		now = Date.parse("2026-03-04T10:21:00.000Z");
+
+		expect(await service.syncDueProfiles()).toEqual({
+			createdLocalDocuments: 0,
+			createdRemotePages: 0,
+			skipped: 0,
+			updatedLocalDocuments: 0,
+			updatedRemotePages: 0,
+		});
+	});
 });

@@ -125,6 +125,104 @@ describe("buildNotionPropertyPayload", () => {
 			},
 		});
 	});
+
+	it("supports rich text, select, date and url payload serialization", () => {
+		const payload = buildNotionPropertyPayload({
+			frontmatter: {
+				dueDate: {
+					end: "2026-03-05",
+					start: "2026-03-04",
+				},
+				referenceUrl: "https://example.com",
+				summary: "Hello",
+				type: "Feature",
+			},
+			mappings: [
+				{
+					direction: "bidirectional",
+					notionProperty: "Due date",
+					obsidianKey: "dueDate",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Reference",
+					obsidianKey: "referenceUrl",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Summary",
+					obsidianKey: "summary",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Type",
+					obsidianKey: "type",
+				},
+			],
+			notionSchema: {
+				"Due date": "date",
+				Reference: "url",
+				Summary: "rich_text",
+				Type: "select",
+			},
+			syncDirection: "obsidian-to-notion",
+		});
+
+		expect(payload).toEqual({
+			"Due date": {
+				date: {
+					end: "2026-03-05",
+					start: "2026-03-04",
+				},
+				type: "date",
+			},
+			Reference: {
+				type: "url",
+				url: "https://example.com",
+			},
+			Summary: {
+				rich_text: [{ text: { content: "Hello" }, type: "text" }],
+				type: "rich_text",
+			},
+			Type: {
+				select: { name: "Feature" },
+				type: "select",
+			},
+		});
+	});
+
+	it("drops unmappable values and unknown schema properties", () => {
+		const payload = buildNotionPropertyPayload({
+			frontmatter: {
+				brokenTags: "not-an-array",
+				estimate: "not-a-number",
+			},
+			mappings: [
+				{
+					direction: "bidirectional",
+					notionProperty: "Estimate",
+					obsidianKey: "estimate",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Missing",
+					obsidianKey: "missing",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Tags",
+					obsidianKey: "brokenTags",
+				},
+			],
+			notionSchema: {
+				Estimate: "number",
+				Tags: "multi_select",
+			},
+			syncDirection: "obsidian-to-notion",
+		});
+
+		expect(payload).toEqual({});
+	});
 });
 
 describe("extractObsidianProperties", () => {
@@ -168,6 +266,38 @@ describe("extractObsidianProperties", () => {
 			done: true,
 			plannedAt: "2026-03-10",
 			status: "Done",
+		});
+	});
+
+	it("normalizes multi-select values and respects one-way mappings", () => {
+		const result = extractObsidianProperties({
+			mappings: [
+				{
+					direction: "obsidian-to-notion",
+					notionProperty: "Push only",
+					obsidianKey: "pushOnly",
+				},
+				{
+					direction: "bidirectional",
+					notionProperty: "Tags",
+					obsidianKey: "tags",
+				},
+			],
+			notionProperties: {
+				"Push only": {
+					type: "rich_text",
+					value: "ignored",
+				},
+				Tags: {
+					type: "multi_select",
+					value: ["alpha", "beta"],
+				},
+			},
+			syncDirection: "notion-to-obsidian",
+		});
+
+		expect(result).toEqual({
+			tags: ["alpha", "beta"],
 		});
 	});
 });
