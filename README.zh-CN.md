@@ -1,6 +1,6 @@
 # Notion Database Sync
 
-[English](README.en.md)
+[English](README.md)
 
 ## 概览
 
