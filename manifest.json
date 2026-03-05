@@ -3,7 +3,7 @@
 	"name": "Notion Database Sync",
 	"version": "1.0.2",
 	"minAppVersion": "0.15.0",
-	"description": "Bidirectional sync between Obsidian Markdown notes and multiple Notion databases.",
+	"description": "Bidirectional sync between Markdown notes and multiple Notion databases.",
 	"author": "wj0s3ph",
 	"isDesktopOnly": false
 }
