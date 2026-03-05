@@ -65,7 +65,7 @@ Notion Database Sync 是一个 Obsidian 社区插件，用来把当前 Markdown 
    在 Notion 中打开包含数据库的页面，点击右上角 `...`，选择 `Add connections`，再选中你的 integration。即使 token 正确，如果 integration 没有访问父页面，API 调用也会失败。
 5. 找到 Notion 数据库 ID。
    把数据库作为整页打开，复制链接，从 URL 中提取 UUID。带连字符和不带连字符的写法都可以，这个插件支持直接粘贴数据库 ID。
-6. 构建或安装插件到 `<Vault>/.obsidian/plugins/obsidian-notion-plugin/`。
+6. 构建或安装插件到 `<Vault>/.obsidian/plugins/notion-database-sync/`。
 7. 打开 **Settings → Community plugins → Notion Database Sync**。
 8. 填入 integration token。
 9. 添加一个数据库配置。
@@ -141,10 +141,11 @@ npm run build:release
 
 当前版本说明：
 
+- [1.0.2 发布说明](docs/releases/1.0.2.md)
 - [1.0.1 发布说明](docs/releases/1.0.1.md)
 - [1.0.0 发布说明](docs/releases/1.0.0.md)
 
-仓库内置了 [.github/workflows/release.yml](.github/workflows/release.yml)，推送类似 `1.0.1` 的 SemVer tag 时会自动发布 `release/*`。
+仓库内置了 [.github/workflows/release.yml](.github/workflows/release.yml)，推送类似 `1.0.2` 的 SemVer tag 时会自动发布 `release/*`。
 
 ## Notion 官方参考
 

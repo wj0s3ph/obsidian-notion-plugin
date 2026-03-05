@@ -65,7 +65,7 @@ Read-only or unsupported Notion property types are intentionally not written bac
    In Notion, open the page that contains the database, click the `...` menu, choose `Add connections`, then select your integration. If the integration cannot access the parent page, API calls will fail even if the token is valid.
 5. Find the Notion database ID.
    Open the database as a full page, copy its link, and extract the UUID in the URL. Notion accepts hyphenated and unhyphenated forms. This plugin lets you paste the database ID directly.
-6. Build or install the plugin into `<Vault>/.obsidian/plugins/obsidian-notion-plugin/`.
+6. Build or install the plugin into `<Vault>/.obsidian/plugins/notion-database-sync/`.
 7. Open **Settings → Community plugins → Notion Database Sync**.
 8. Paste the integration token.
 9. Add a database profile.
@@ -141,10 +141,11 @@ npm run build:release
 
 Current release notes:
 
+- [1.0.2 release notes](docs/releases/1.0.2.md)
 - [1.0.1 release notes](docs/releases/1.0.1.md)
 - [1.0.0 release notes](docs/releases/1.0.0.md)
 
-The repository includes [.github/workflows/release.yml](.github/workflows/release.yml), which publishes `release/*` on SemVer tags such as `1.0.1`.
+The repository includes [.github/workflows/release.yml](.github/workflows/release.yml), which publishes `release/*` on SemVer tags such as `1.0.2`.
 
 ## Official Notion references
 
