@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" fill="none">
+  <rect width="1200" height="680" fill="#F6F8FC"/>
+  <rect x="48" y="44" width="1104" height="592" rx="18" fill="#FFFFFF" stroke="#D7DFED"/>
+  <rect x="48" y="44" width="1104" height="76" rx="18" fill="#111827"/>
+  <text x="82" y="92" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#FFFFFF">Step 1 / 步骤 1: Create an internal integration</text>
+
+  <rect x="90" y="154" width="1020" height="446" rx="14" fill="#F9FBFF" stroke="#D7DFED"/>
+
+  <circle cx="136" cy="208" r="16" fill="#2563EB"/>
+  <text x="131" y="214" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF">1</text>
+  <text x="166" y="214" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#0F172A">Open Notion integrations / 打开 Notion integrations</text>
+
+  <circle cx="136" cy="286" r="16" fill="#2563EB"/>
+  <text x="131" y="292" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF">2</text>
+  <text x="166" y="292" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#0F172A">Click + New integration / 点击 + New integration</text>
+
+  <circle cx="136" cy="364" r="16" fill="#2563EB"/>
+  <text x="131" y="370" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF">3</text>
+  <text x="166" y="370" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#0F172A">Choose workspace and capabilities / 选择 workspace 与 capabilities</text>
+
+  <circle cx="136" cy="442" r="16" fill="#2563EB"/>
+  <text x="131" y="448" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF">4</text>
+  <text x="166" y="448" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#0F172A">Copy token securely / 安全复制 token</text>
+
+  <rect x="166" y="490" width="904" height="86" rx="12" fill="#EEF4FF" stroke="#BDD4FF"/>
+  <text x="190" y="530" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#1E3A8A">Tip / 提示: Only workspace owners can create integrations.</text>
+  <text x="190" y="560" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#1E3A8A">仅 workspace owner 可创建 integration。</text>
+</svg>

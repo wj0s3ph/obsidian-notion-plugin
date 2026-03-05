@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" fill="none">
+  <rect width="1200" height="680" fill="#F6F8FC"/>
+  <rect x="48" y="44" width="1104" height="592" rx="18" fill="#FFFFFF" stroke="#D7DFED"/>
+  <rect x="48" y="44" width="1104" height="76" rx="18" fill="#111827"/>
+  <text x="82" y="92" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#FFFFFF">Step 2 / 步骤 2: Share database and copy database ID</text>
+
+  <rect x="88" y="146" width="508" height="468" rx="14" fill="#FAFBFD" stroke="#D7DFED"/>
+  <text x="112" y="186" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Add connections / 添加连接</text>
+  <rect x="112" y="208" width="460" height="56" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="132" y="244" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0F172A">Page menu (...) - Add connections</text>
+  <rect x="112" y="286" width="460" height="56" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="132" y="322" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0F172A">Select your integration</text>
+  <rect x="112" y="364" width="460" height="56" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="132" y="400" font-family="Arial, Helvetica, sans-serif" font-size="20" fill="#0F172A">Confirm access to parent page</text>
+
+  <rect x="624" y="146" width="488" height="468" rx="14" fill="#FAFBFD" stroke="#D7DFED"/>
+  <text x="648" y="186" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Database ID / 数据库 ID</text>
+  <rect x="648" y="218" width="440" height="92" rx="10" fill="#EEF4FF" stroke="#BDD4FF"/>
+  <text x="668" y="254" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#1E3A8A">https://www.notion.so/workspace/Project-Plan-</text>
+  <text x="668" y="278" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#1E3A8A">0123456789abcdef0123456789abcdef</text>
+  <rect x="648" y="336" width="440" height="56" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="668" y="372" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0F172A">Use UUID in URL as database ID</text>
+  <rect x="648" y="408" width="440" height="56" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="668" y="444" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0F172A">Hyphenated and plain UUID are both accepted</text>
+  <rect x="648" y="480" width="440" height="96" rx="10" fill="#FEF3C7" stroke="#FCD34D"/>
+  <text x="668" y="518" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#92400E">Important / 注意</text>
+  <text x="668" y="546" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#92400E">Share original database, not only linked view.</text>
+</svg>

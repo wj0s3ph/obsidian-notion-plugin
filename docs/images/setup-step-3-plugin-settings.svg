@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680" fill="none">
+  <rect width="1200" height="680" fill="#F6F8FC"/>
+  <rect x="48" y="44" width="1104" height="592" rx="18" fill="#FFFFFF" stroke="#D7DFED"/>
+  <rect x="48" y="44" width="1104" height="76" rx="18" fill="#111827"/>
+  <text x="82" y="92" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#FFFFFF">Step 3 / 步骤 3: Configure plugin settings</text>
+
+  <rect x="88" y="146" width="1024" height="468" rx="14" fill="#FAFBFD" stroke="#D7DFED"/>
+  <text x="112" y="184" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#0F172A">Settings - Community plugins - Notion Database Sync</text>
+
+  <rect x="112" y="210" width="460" height="74" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="132" y="244" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0F172A">Integration token</text>
+  <text x="132" y="268" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748B">secret_xxx...</text>
+
+  <rect x="596" y="210" width="492" height="74" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="616" y="244" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0F172A">Notion database ID</text>
+  <text x="616" y="268" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748B">0123456789abcdef0123456789abcdef</text>
+
+  <rect x="112" y="304" width="540" height="74" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="132" y="338" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#0F172A">Title property</text>
+  <text x="132" y="362" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#64748B">Name</text>
+
+  <rect x="676" y="304" width="412" height="74" rx="10" fill="#DBEAFE" stroke="#93C5FD"/>
+  <text x="696" y="338" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#1E40AF">Fetch properties / 拉取属性</text>
+  <text x="696" y="362" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#1E40AF">Click once before mapping</text>
+
+  <rect x="112" y="398" width="976" height="186" rx="10" fill="#FFFFFF" stroke="#D7DFED"/>
+  <text x="132" y="432" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#0F172A">Property mappings / 属性映射</text>
+  <rect x="132" y="450" width="440" height="54" rx="8" fill="#F8FAFC" stroke="#D7DFED"/>
+  <text x="152" y="484" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#0F172A">Frontmatter key: published</text>
+  <rect x="592" y="450" width="476" height="54" rx="8" fill="#F8FAFC" stroke="#D7DFED"/>
+  <text x="612" y="484" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#0F172A">Notion property: Published</text>
+  <text x="132" y="540" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#334155">Tip / 提示: Re-run Fetch properties when schema changes.</text>
+</svg>

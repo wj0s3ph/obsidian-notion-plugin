@@ -79,6 +79,17 @@ Read-only or unsupported Notion property types are intentionally not written bac
    This reads the remote database schema and caches the available property names for the mapping dropdown.
 12. Add property mappings by entering a frontmatter key and selecting a Notion property from the dropdown.
 
+### Setup screenshots
+
+The following images are setup illustrations that match the plugin flow.
+
+1. Create internal integration / 创建 internal integration
+   ![Create internal integration](docs/images/setup-step-1-integration.svg)
+2. Share database using Add connections, then copy database ID / 通过 Add connections 共享数据库并复制数据库 ID
+   ![Share database and copy database ID](docs/images/setup-step-2-share-and-id.svg)
+3. Fill plugin settings and click Fetch properties / 在插件设置中填写并点击拉取属性
+   ![Plugin settings example](docs/images/setup-step-3-plugin-settings.svg)
+
 ### Notion-specific notes
 
 - Notion now refers to many database containers as data sources in the API. The plugin still asks for a "database ID" because that matches how most users find the ID in Notion.
@@ -212,6 +223,17 @@ Notion Database Sync 是一个 Obsidian 社区插件，用来把当前 Markdown 
 11. 点击一次 **Fetch properties / 拉取属性**。
    这一步会读取远端数据库 schema，并把可用属性名缓存到映射下拉框里。
 12. 在属性映射表中填写 frontmatter 键，并从下拉框选择对应的 Notion 属性。
+
+### 配置截图示例
+
+以下图片是与插件流程一致的配置示意图。
+
+1. Create internal integration / 创建 internal integration
+   ![Create internal integration](docs/images/setup-step-1-integration.svg)
+2. Share database using Add connections, then copy database ID / 通过 Add connections 共享数据库并复制数据库 ID
+   ![Share database and copy database ID](docs/images/setup-step-2-share-and-id.svg)
+3. Fill plugin settings and click Fetch properties / 在插件设置中填写并点击拉取属性
+   ![Plugin settings example](docs/images/setup-step-3-plugin-settings.svg)
 
 ### Notion 相关说明
 
