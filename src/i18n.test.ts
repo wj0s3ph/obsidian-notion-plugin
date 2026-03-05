@@ -25,5 +25,6 @@ describe("getStrings", () => {
 
 		expect(strings.commandSyncActiveNoteDatabase).toBe("同步当前笔记数据库");
 		expect(strings.featureFetchProperties).toBe("拉取属性");
+		expect(strings.notionQuickSetup).toBe("快速配置");
 	});
 });

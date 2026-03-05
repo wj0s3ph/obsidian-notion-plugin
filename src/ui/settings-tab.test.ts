@@ -193,6 +193,8 @@ describe("NotionSyncSettingTab", () => {
 
 		expect(tab.containerEl.querySelector("h2, h3, h4, h5")).toBeNull();
 		expect(tab.containerEl.textContent).toContain("Integration");
+		expect(tab.containerEl.textContent).toContain("Quick setup");
+		expect(tab.containerEl.textContent).toContain("Create an internal integration in your Notion workspace.");
 		expect(tab.containerEl.textContent).toContain("Database profiles");
 		expect(tab.containerEl.textContent).toContain("Tasks");
 		expect(tab.containerEl.textContent).toContain("Property mappings");

@@ -25,6 +25,9 @@ export interface I18nStrings {
 	frontmatterKeyPlaceholder: string;
 	integration: string;
 	integrationToken: string;
+	notionQuickSetup: string;
+	notionQuickSetupHint: string;
+	notionQuickSetupSteps: string[];
 	linkNoteBeforePulling: string;
 	mapFrontmatterKeyToNotionProperty: string;
 	mapping(index: number): string;
@@ -79,6 +82,14 @@ const EN_STRINGS: I18nStrings = {
 	frontmatterKeyPlaceholder: "Frontmatter key",
 	integration: "Integration",
 	integrationToken: "Integration token",
+	notionQuickSetup: "Quick setup",
+	notionQuickSetupHint: "Follow the Notion integration flow before adding mappings.",
+	notionQuickSetupSteps: [
+		"Create an internal integration in your Notion workspace.",
+		"Share the target page or database with that integration from Add connections.",
+		"Paste the integration token in this settings page.",
+		"Fill in database ID, then click Fetch properties before mapping fields.",
+	],
 	linkNoteBeforePulling: "Link this note to a Notion page before pulling from Notion.",
 	mapFrontmatterKeyToNotionProperty: "Map a frontmatter key to a Notion property.",
 	mapping: (index) => `Mapping ${index}`,
@@ -134,6 +145,14 @@ const ZH_CN_STRINGS: I18nStrings = {
 	frontmatterKeyPlaceholder: "Frontmatter 键",
 	integration: "集成",
 	integrationToken: "集成令牌",
+	notionQuickSetup: "快速配置",
+	notionQuickSetupHint: "先完成 Notion integration 配置流程，再开始做字段映射。",
+	notionQuickSetupSteps: [
+		"在 Notion 工作区中创建 internal integration。",
+		"在 Add connections 里把目标页面或数据库共享给该 integration。",
+		"把 integration token 粘贴到当前设置页。",
+		"填写数据库 ID 后，先点击拉取属性，再配置映射字段。",
+	],
 	linkNoteBeforePulling: "请先将此笔记关联到 Notion 页面，再执行拉取。",
 	mapFrontmatterKeyToNotionProperty: "将 frontmatter 键映射到 Notion 属性。",
 	mapping: (index) => `映射 ${index}`,

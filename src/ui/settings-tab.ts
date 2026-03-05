@@ -42,6 +42,18 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
+			.setName(strings.notionQuickSetup)
+			.setHeading();
+
+		strings.notionQuickSetupSteps.forEach((step, index) => {
+			new Setting(containerEl)
+				.setName(`${index + 1}. ${step}`);
+		});
+
+		new Setting(containerEl)
+			.setDesc(strings.notionQuickSetupHint);
+
+		new Setting(containerEl)
 			.setName(strings.databaseProfiles)
 			.setHeading();
 
