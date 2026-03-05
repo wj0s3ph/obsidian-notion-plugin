@@ -143,6 +143,7 @@ npm run build:release
 
 Current release notes:
 
+- [1.0.1 release notes](docs/releases/1.0.1.md)
 - [1.0.0 release notes](docs/releases/1.0.0.md)
 
 The repository includes [.github/workflows/release.yml](.github/workflows/release.yml), which publishes `release/*` on SemVer tags such as `1.0.1`.
@@ -297,6 +298,7 @@ npm run build:release
 
 当前版本说明：
 
+- [1.0.1 发布说明](docs/releases/1.0.1.md)
 - [1.0.0 发布说明](docs/releases/1.0.0.md)
 
 仓库内置了 [.github/workflows/release.yml](.github/workflows/release.yml)，推送类似 `1.0.1` 的 SemVer tag 时会自动发布 `release/*`。
