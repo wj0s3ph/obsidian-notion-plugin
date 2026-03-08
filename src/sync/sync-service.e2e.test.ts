@@ -14,19 +14,20 @@ import { SyncService } from "./sync-service";
 class MemoryLocalRepository implements LocalDocumentRepository {
 	constructor(private readonly documents: LocalDocument[]) {}
 
-	async readDocument(path: string): Promise<LocalDocument | null> {
+	readDocument(path: string): Promise<LocalDocument | null> {
 		const document = this.documents.find((entry) => entry.path === path);
-		return document ? structuredClone(document) : null;
+		return Promise.resolve(document ? structuredClone(document) : null);
 	}
 
-	async upsertDocument(document: LocalDocument): Promise<void> {
+	upsertDocument(document: LocalDocument): Promise<void> {
 		const index = this.documents.findIndex((entry) => entry.path === document.path);
 		if (index === -1) {
 			this.documents.push(structuredClone(document));
-			return;
+			return Promise.resolve();
 		}
 
 		this.documents[index] = structuredClone(document);
+		return Promise.resolve();
 	}
 
 	read(path: string): LocalDocument | undefined {
@@ -37,16 +38,16 @@ class MemoryLocalRepository implements LocalDocumentRepository {
 class MemoryNotionRepository implements NotionRepository {
 	constructor(private readonly snapshots: Record<string, NotionDatabaseSnapshot>) {}
 
-	async getDatabaseSnapshot(databaseId: string): Promise<NotionDatabaseSnapshot> {
+	getDatabaseSnapshot(databaseId: string): Promise<NotionDatabaseSnapshot> {
 		const snapshot = this.snapshots[databaseId];
 		if (!snapshot) {
 			throw new Error(`Missing database ${databaseId}`);
 		}
 
-		return structuredClone(snapshot);
+		return Promise.resolve(structuredClone(snapshot));
 	}
 
-	async createPage(input: {
+	createPage(input: {
 		databaseId: string;
 		markdown: string;
 		properties: Record<string, Record<string, unknown>>;
@@ -69,10 +70,10 @@ class MemoryNotionRepository implements NotionRepository {
 		};
 
 		snapshot.pages.push(structuredClone(page));
-		return page;
+		return Promise.resolve(page);
 	}
 
-	async updatePage(input: {
+	updatePage(input: {
 		markdown: string;
 		pageId: string;
 		properties: Record<string, Record<string, unknown>>;
@@ -99,7 +100,7 @@ class MemoryNotionRepository implements NotionRepository {
 		};
 
 		snapshot.pages[index] = structuredClone(updatedPage);
-		return updatedPage;
+		return Promise.resolve(updatedPage);
 	}
 
 	updateRemotePage(databaseId: string, pageId: string, markdown: string, lastEditedTime: string): void {

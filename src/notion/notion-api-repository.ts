@@ -335,7 +335,7 @@ function createResponseLike(response: Awaited<ReturnType<typeof obsidian.request
 		headers: new Headers(response.headers),
 		ok: response.status >= 200 && response.status < 300,
 		status: response.status,
-		text: async () => response.text,
+		text: () => Promise.resolve(response.text),
 	} as Response;
 }
 

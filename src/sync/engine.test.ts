@@ -14,19 +14,20 @@ import { pullRemoteDatabaseFile, syncDatabaseFile } from "./engine";
 class InMemoryLocalRepository implements LocalDocumentRepository {
 	constructor(private readonly documents: LocalDocument[]) {}
 
-	async readDocument(path: string): Promise<LocalDocument | null> {
+	readDocument(path: string): Promise<LocalDocument | null> {
 		const document = this.documents.find((entry) => entry.path === path);
-		return document ? structuredClone(document) : null;
+		return Promise.resolve(document ? structuredClone(document) : null);
 	}
 
-	async upsertDocument(document: LocalDocument): Promise<void> {
+	upsertDocument(document: LocalDocument): Promise<void> {
 		const index = this.documents.findIndex((entry) => entry.path === document.path);
 		if (index === -1) {
 			this.documents.push(structuredClone(document));
-			return;
+			return Promise.resolve();
 		}
 
 		this.documents[index] = structuredClone(document);
+		return Promise.resolve();
 	}
 
 	getDocument(path: string): LocalDocument | undefined {
@@ -40,16 +41,16 @@ class InMemoryNotionRepository implements NotionRepository {
 
 	constructor(private readonly databases: Record<string, NotionDatabaseSnapshot>) {}
 
-	async getDatabaseSnapshot(databaseId: string): Promise<NotionDatabaseSnapshot> {
+	getDatabaseSnapshot(databaseId: string): Promise<NotionDatabaseSnapshot> {
 		const database = this.databases[databaseId];
 		if (!database) {
 			throw new Error(`Unknown database: ${databaseId}`);
 		}
 
-		return structuredClone(database);
+		return Promise.resolve(structuredClone(database));
 	}
 
-	async createPage(input: {
+	createPage(input: {
 		databaseId: string;
 		markdown: string;
 		properties: Record<string, Record<string, unknown>>;
@@ -77,10 +78,10 @@ class InMemoryNotionRepository implements NotionRepository {
 
 		database.pages.push(structuredClone(page));
 		this.createdPages.push({ databaseId: input.databaseId, page: structuredClone(page) });
-		return page;
+		return Promise.resolve(page);
 	}
 
-	async updatePage(input: {
+	updatePage(input: {
 		markdown: string;
 		pageId: string;
 		properties: Record<string, Record<string, unknown>>;
@@ -117,7 +118,7 @@ class InMemoryNotionRepository implements NotionRepository {
 
 		database.pages[index] = structuredClone(page);
 		this.updatedPages.push({ pageId: input.pageId, page: structuredClone(page) });
-		return page;
+		return Promise.resolve(page);
 	}
 }
 
@@ -297,7 +298,7 @@ describe("syncDatabaseFile", () => {
 				},
 			},
 		});
-		notion.createPage = async (input) => ({
+		notion.createPage = (input) => Promise.resolve({
 			id: "page-1",
 			lastEditedTime: "2026-03-04T10:05:00.000Z",
 			markdown: input.markdown,
@@ -369,7 +370,7 @@ describe("syncDatabaseFile", () => {
 				},
 			},
 		});
-		notion.updatePage = async (input) => ({
+		notion.updatePage = (input) => Promise.resolve({
 			id: input.pageId,
 			lastEditedTime: "2026-03-04T10:25:00.000Z",
 			markdown: input.markdown,

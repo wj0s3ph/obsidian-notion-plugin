@@ -9,9 +9,9 @@ interface RegisteredCommand {
 }
 
 describe("registerCommands", () => {
-	it("registers manual sync commands for pushing and pulling the active markdown note", async () => {
-		const syncActiveFile = vi.fn(async () => undefined);
-		const pullActiveFileFromNotion = vi.fn(async () => undefined);
+	it("registers manual sync commands for pushing and pulling the active markdown note", () => {
+		const syncActiveFile = vi.fn(() => Promise.resolve(undefined));
+		const pullActiveFileFromNotion = vi.fn(() => Promise.resolve(undefined));
 		const addCommand = vi.fn();
 		const plugin = {
 			addCommand,

@@ -165,7 +165,7 @@ class TestPlugin extends NotionSyncPlugin {
 		propertyMappings: [],
 		titleProperty: "Name",
 	};
-	chooseDatabaseMock = vi.fn(async (_databases: DatabaseSyncSetting[]) => this.selection);
+	chooseDatabaseMock = vi.fn((_databases: DatabaseSyncSetting[]) => Promise.resolve(this.selection));
 	syncResult: SyncFileResult = {
 		status: "success",
 		summary: {
@@ -182,11 +182,11 @@ class TestPlugin extends NotionSyncPlugin {
 		Slug: "rich_text",
 	};
 
-	syncFile = vi.fn(async () => this.syncResult);
-	pullFile = vi.fn(async () => this.syncResult);
-	saveSettingsMock = vi.fn(async () => undefined);
+	syncFile = vi.fn(() => Promise.resolve(this.syncResult));
+	pullFile = vi.fn(() => Promise.resolve(this.syncResult));
+	saveSettingsMock = vi.fn(() => Promise.resolve(undefined));
 
-	protected override async chooseDatabase(_databases: DatabaseSyncSetting[]) {
+	protected override chooseDatabase(_databases: DatabaseSyncSetting[]) {
 		return this.chooseDatabaseMock(_databases);
 	}
 
@@ -199,7 +199,7 @@ class TestPlugin extends NotionSyncPlugin {
 
 	protected override createNotionRepository() {
 		return {
-			getDatabaseSchema: vi.fn(async () => this.databaseSchema),
+			getDatabaseSchema: vi.fn(() => Promise.resolve(this.databaseSchema)),
 		} as never;
 	}
 

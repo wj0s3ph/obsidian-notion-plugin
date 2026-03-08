@@ -49,7 +49,7 @@ describe("createNotionClientFactory", () => {
 	});
 
 	it("strips browser-unsafe request options before delegating to fetch", async () => {
-		const rawFetch = vi.fn(async () => new Response("", { status: 200 }));
+		const rawFetch = vi.fn(() => Promise.resolve(new Response("", { status: 200 })));
 		vi.stubGlobal("fetch", rawFetch);
 
 		const createClient = createNotionClientFactory(() => "secret_test", {
@@ -94,7 +94,7 @@ describe("createNotionClientFactory", () => {
 			status: 200,
 			text: "{\"ok\":true}",
 		});
-		const rawFetch = vi.fn(async () => new Response("", { status: 200 }));
+		const rawFetch = vi.fn(() => Promise.resolve(new Response("", { status: 200 })));
 		vi.stubGlobal("fetch", rawFetch);
 
 		const createClient = createNotionClientFactory(() => "secret_test");

@@ -4,11 +4,11 @@ import { NotionApiRepository } from "./notion-api-repository";
 
 describe("NotionApiRepository", () => {
 	it("hydrates a database snapshot with schema, markdown and normalized properties", async () => {
-		const repository = new NotionApiRepository(() => ({
-			dataSources: {
-				query: async (input) => ({
-					has_more: input.start_cursor !== "cursor-1",
-					next_cursor: input.start_cursor ? null : "cursor-1",
+			const repository = new NotionApiRepository(() => ({
+				dataSources: {
+					query: (input) => Promise.resolve({
+						has_more: input.start_cursor !== "cursor-1",
+						next_cursor: input.start_cursor ? null : "cursor-1",
 					results: input.start_cursor ? [{
 						id: "page-2",
 						last_edited_time: "2026-03-04T10:05:00.000Z",
@@ -47,22 +47,22 @@ describe("NotionApiRepository", () => {
 							},
 						},
 					],
-				}),
-				retrieve: async () => ({
-					properties: {
+					}),
+					retrieve: () => Promise.resolve({
+						properties: {
 						Created: { type: "created_time" },
 						Name: { type: "title" },
 						Status: { type: "status" },
 						Tags: { type: "multi_select" },
 					},
-				}),
-			},
-			pages: {
-				retrieveMarkdown: async (input) => ({
-					markdown: input.page_id === "page-2" ? "# Second" : "# Launch",
-				}),
-			},
-		}));
+					}),
+				},
+				pages: {
+					retrieveMarkdown: (input) => Promise.resolve({
+						markdown: input.page_id === "page-2" ? "# Second" : "# Launch",
+					}),
+				},
+			}));
 
 		const snapshot = await repository.getDatabaseSnapshot("db-1");
 
@@ -116,24 +116,24 @@ describe("NotionApiRepository", () => {
 		const dataSourceRetrieveCalls: unknown[] = [];
 		const dataSourceQueryCalls: unknown[] = [];
 		const databaseRetrieveCalls: unknown[] = [];
-		const repository = new NotionApiRepository(() => ({
-			databases: {
-				retrieve: async (input: unknown) => {
-					databaseRetrieveCalls.push(input);
-					return {
-						data_sources: [{
-							id: "data-source-1",
-						}],
-					};
+			const repository = new NotionApiRepository(() => ({
+				databases: {
+					retrieve: (input: unknown) => {
+						databaseRetrieveCalls.push(input);
+						return Promise.resolve({
+							data_sources: [{
+								id: "data-source-1",
+							}],
+						});
+					},
 				},
-			},
-			dataSources: {
-				query: async (input) => {
-					dataSourceQueryCalls.push(input);
-					return {
-						has_more: false,
-						next_cursor: null,
-						results: [{
+				dataSources: {
+					query: (input) => {
+						dataSourceQueryCalls.push(input);
+						return Promise.resolve({
+							has_more: false,
+							next_cursor: null,
+							results: [{
 							id: "page-1",
 							last_edited_time: "2026-03-04T10:00:00.000Z",
 							object: "page",
@@ -143,13 +143,13 @@ describe("NotionApiRepository", () => {
 									type: "title",
 								},
 							},
-						}],
-					};
-				},
-				retrieve: async (input) => {
-					dataSourceRetrieveCalls.push(input);
-					if (input.data_source_id === "database-1") {
-						const error = new Error("Could not find database with ID: database-1.");
+							}],
+						});
+					},
+					retrieve: (input) => {
+						dataSourceRetrieveCalls.push(input);
+						if (input.data_source_id === "database-1") {
+							const error = new Error("Could not find database with ID: database-1.");
 						Object.assign(error, {
 							code: "object_not_found",
 							status: 404,
@@ -157,19 +157,19 @@ describe("NotionApiRepository", () => {
 						throw error;
 					}
 
-					return {
-						properties: {
-							Name: { type: "title" },
-						},
-					};
+						return Promise.resolve({
+							properties: {
+								Name: { type: "title" },
+							},
+						});
+					},
 				},
-			},
-			pages: {
-				retrieveMarkdown: async () => ({
-					markdown: "# Launch",
-				}),
-			},
-		}));
+				pages: {
+					retrieveMarkdown: () => Promise.resolve({
+						markdown: "# Launch",
+					}),
+				},
+			}));
 
 		const snapshot = await repository.getDatabaseSnapshot("database-1");
 
@@ -190,7 +190,7 @@ describe("NotionApiRepository", () => {
 	});
 
 	it("fetches database schema without querying pages when settings only need property names", async () => {
-		const dataSourceQuery = vi.fn(async () => ({
+		const dataSourceQuery = vi.fn(() => Promise.resolve({
 			has_more: false,
 			next_cursor: null,
 			results: [],
@@ -198,7 +198,7 @@ describe("NotionApiRepository", () => {
 		const repository = new NotionApiRepository(() => ({
 			dataSources: {
 				query: dataSourceQuery,
-				retrieve: async () => ({
+				retrieve: () => Promise.resolve({
 					properties: {
 						Name: { type: "title" },
 						Published: { type: "date" },
@@ -207,7 +207,7 @@ describe("NotionApiRepository", () => {
 				}),
 			},
 			pages: {
-				retrieveMarkdown: async () => ({
+				retrieveMarkdown: () => Promise.resolve({
 					markdown: "",
 				}),
 			},
@@ -227,16 +227,16 @@ describe("NotionApiRepository", () => {
 		const createCalls: unknown[] = [];
 		const updateCalls: unknown[] = [];
 		const markdownCalls: unknown[] = [];
-		const repository = new NotionApiRepository(() => ({
-			dataSources: {
-				query: async () => ({ has_more: false, next_cursor: null, results: [] }),
-				retrieve: async () => ({ properties: {} }),
-			},
-			pages: {
-				create: async (input: unknown) => {
-					createCalls.push(input);
-					return {
-						id: "page-1",
+			const repository = new NotionApiRepository(() => ({
+				dataSources: {
+					query: () => Promise.resolve({ has_more: false, next_cursor: null, results: [] }),
+					retrieve: () => Promise.resolve({ properties: {} }),
+				},
+				pages: {
+					create: (input: unknown) => {
+						createCalls.push(input);
+						return Promise.resolve({
+							id: "page-1",
 						last_edited_time: "2026-03-04T10:00:00.000Z",
 						object: "page",
 						properties: {
@@ -244,16 +244,16 @@ describe("NotionApiRepository", () => {
 								title: [{ plain_text: "Launch" }],
 								type: "title",
 							},
-						},
-					};
-				},
-				retrieveMarkdown: async () => ({
-					markdown: "# Launch",
-				}),
-				update: async (input: unknown) => {
-					updateCalls.push(input);
-					return {
-						id: "page-1",
+							},
+						});
+					},
+					retrieveMarkdown: () => Promise.resolve({
+						markdown: "# Launch",
+					}),
+					update: (input: unknown) => {
+						updateCalls.push(input);
+						return Promise.resolve({
+							id: "page-1",
 						last_edited_time: "2026-03-04T10:05:00.000Z",
 						object: "page",
 						properties: {
@@ -261,17 +261,17 @@ describe("NotionApiRepository", () => {
 								title: [{ plain_text: "Launch" }],
 								type: "title",
 							},
-						},
-					};
+							},
+						});
+					},
+					updateMarkdown: (input: unknown) => {
+						markdownCalls.push(input);
+						return Promise.resolve({
+							markdown: "# Launch",
+						});
+					},
 				},
-				updateMarkdown: async (input: unknown) => {
-					markdownCalls.push(input);
-					return {
-						markdown: "# Launch",
-					};
-				},
-			},
-		}));
+			}));
 
 		await repository.createPage({
 			databaseId: "db-1",
@@ -333,15 +333,15 @@ describe("NotionApiRepository", () => {
 	});
 
 	it("throws when the client does not expose write methods", async () => {
-		const repository = new NotionApiRepository(() => ({
-			dataSources: {
-				query: async () => ({ has_more: false, next_cursor: null, results: [] }),
-				retrieve: async () => ({ properties: {} }),
-			},
-			pages: {
-				retrieveMarkdown: async () => ({ markdown: "" }),
-			},
-		}));
+			const repository = new NotionApiRepository(() => ({
+				dataSources: {
+					query: () => Promise.resolve({ has_more: false, next_cursor: null, results: [] }),
+					retrieve: () => Promise.resolve({ properties: {} }),
+				},
+				pages: {
+					retrieveMarkdown: () => Promise.resolve({ markdown: "" }),
+				},
+			}));
 
 		await expect(repository.createPage({
 			databaseId: "db-1",
@@ -360,10 +360,10 @@ describe("NotionApiRepository", () => {
 	});
 
 	it("normalizes additional property types and falls back to Untitled when no title exists", async () => {
-		const repository = new NotionApiRepository(() => ({
-			dataSources: {
-				query: async () => ({
-					has_more: false,
+			const repository = new NotionApiRepository(() => ({
+				dataSources: {
+					query: () => Promise.resolve({
+						has_more: false,
 					next_cursor: null,
 					results: [{
 						id: "page-1",
@@ -400,9 +400,9 @@ describe("NotionApiRepository", () => {
 							},
 						},
 					}],
-				}),
-				retrieve: async () => ({
-					properties: {
+					}),
+					retrieve: () => Promise.resolve({
+						properties: {
 						Check: { type: "checkbox" },
 						Choice: { type: "select" },
 						Date: { type: "date" },
@@ -411,14 +411,14 @@ describe("NotionApiRepository", () => {
 						Score: { type: "number" },
 						Unknown: { type: "mystery" },
 					},
-				}),
-			},
-			pages: {
-				retrieveMarkdown: async () => ({
-					markdown: "# Untitled",
-				}),
-			},
-		}));
+					}),
+				},
+				pages: {
+					retrieveMarkdown: () => Promise.resolve({
+						markdown: "# Untitled",
+					}),
+				},
+			}));
 
 		const snapshot = await repository.getDatabaseSnapshot("db-1");
 
@@ -461,10 +461,10 @@ describe("NotionApiRepository", () => {
 	});
 
 	it("preserves Notion date ranges instead of flattening them to a single start date", async () => {
-		const repository = new NotionApiRepository(() => ({
-			dataSources: {
-				query: async () => ({
-					has_more: false,
+			const repository = new NotionApiRepository(() => ({
+				dataSources: {
+					query: () => Promise.resolve({
+						has_more: false,
 					next_cursor: null,
 					results: [{
 						id: "page-1",
@@ -484,20 +484,20 @@ describe("NotionApiRepository", () => {
 							},
 						},
 					}],
-				}),
-				retrieve: async () => ({
-					properties: {
+					}),
+					retrieve: () => Promise.resolve({
+						properties: {
 						Date: { type: "date" },
 						Name: { type: "title" },
 					},
-				}),
-			},
-			pages: {
-				retrieveMarkdown: async () => ({
-					markdown: "# Launch",
-				}),
-			},
-		}));
+					}),
+				},
+				pages: {
+					retrieveMarkdown: () => Promise.resolve({
+						markdown: "# Launch",
+					}),
+				},
+			}));
 
 		const snapshot = await repository.getDatabaseSnapshot("db-1");
 

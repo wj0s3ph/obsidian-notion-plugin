@@ -181,8 +181,8 @@ describe("NotionSyncSettingTab", () => {
 	it("renders section headings through Setting.setHeading instead of raw heading tags", () => {
 		const profile = createDefaultDatabaseConfig("Tasks");
 		const tab = new NotionSyncSettingTab({} as never, {
-			fetchDatabaseProperties: vi.fn(async () => []),
-			saveSettings: vi.fn(async () => undefined),
+			fetchDatabaseProperties: vi.fn(() => Promise.resolve([])),
+			saveSettings: vi.fn(() => Promise.resolve(undefined)),
 			settings: {
 				databases: [profile],
 				notionToken: "",
@@ -217,10 +217,10 @@ describe("NotionSyncSettingTab", () => {
 				obsidianKey: "published",
 			}],
 		};
-		const fetchDatabaseProperties = vi.fn(async () => ["Published", "Slug", "Status"]);
+		const fetchDatabaseProperties = vi.fn(() => Promise.resolve(["Published", "Slug", "Status"]));
 		const tab = new NotionSyncSettingTab({} as never, {
 			fetchDatabaseProperties,
-			saveSettings: vi.fn(async () => undefined),
+			saveSettings: vi.fn(() => Promise.resolve(undefined)),
 			settings: {
 				databases: [profile],
 				notionToken: "secret_test",
@@ -257,8 +257,8 @@ describe("NotionSyncSettingTab", () => {
 			}],
 		};
 		const tab = new NotionSyncSettingTab({} as never, {
-			fetchDatabaseProperties: vi.fn(async () => ["Published"]),
-			saveSettings: vi.fn(async () => undefined),
+			fetchDatabaseProperties: vi.fn(() => Promise.resolve(["Published"])),
+			saveSettings: vi.fn(() => Promise.resolve(undefined)),
 			settings: {
 				databases: [profile],
 				notionToken: "secret_test",
