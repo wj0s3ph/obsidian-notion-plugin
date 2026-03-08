@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-notion-plugin",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Bidirectional sync between Markdown notes and multiple Notion databases.",
 	"main": "main.js",
 	"type": "module",

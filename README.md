@@ -141,11 +141,12 @@ npm run build:release
 
 Current release notes:
 
+- [1.0.3 release notes](docs/releases/1.0.3.md)
 - [1.0.2 release notes](docs/releases/1.0.2.md)
 - [1.0.1 release notes](docs/releases/1.0.1.md)
 - [1.0.0 release notes](docs/releases/1.0.0.md)
 
-The repository includes [.github/workflows/release.yml](.github/workflows/release.yml), which publishes `release/*` on SemVer tags such as `1.0.2`.
+The repository includes [.github/workflows/release.yml](.github/workflows/release.yml), which publishes `release/*` on SemVer tags such as `1.0.3`.
 
 ## Official Notion references
 

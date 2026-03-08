@@ -141,11 +141,12 @@ npm run build:release
 
 当前版本说明：
 
+- [1.0.3 发布说明](docs/releases/1.0.3.md)
 - [1.0.2 发布说明](docs/releases/1.0.2.md)
 - [1.0.1 发布说明](docs/releases/1.0.1.md)
 - [1.0.0 发布说明](docs/releases/1.0.0.md)
 
-仓库内置了 [.github/workflows/release.yml](.github/workflows/release.yml)，推送类似 `1.0.2` 的 SemVer tag 时会自动发布 `release/*`。
+仓库内置了 [.github/workflows/release.yml](.github/workflows/release.yml)，推送类似 `1.0.3` 的 SemVer tag 时会自动发布 `release/*`。
 
 ## Notion 官方参考
 

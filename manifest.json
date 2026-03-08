@@ -1,7 +1,7 @@
 {
 	"id": "notion-database-sync",
 	"name": "Notion Database Sync",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"minAppVersion": "0.15.0",
 	"description": "Bidirectional sync between Markdown notes and multiple Notion databases.",
 	"author": "wj0s3ph",
