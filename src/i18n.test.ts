@@ -17,7 +17,7 @@ describe("resolveLocale", () => {
 
 describe("getStrings", () => {
 	it("returns English copy by default", () => {
-		expect(getStrings("en").commandSyncActiveNoteDatabase).toBe("Sync active note database");
+		expect(getStrings().commandSyncActiveNoteDatabase).toBe("Sync active note database");
 	});
 
 	it("returns simplified Chinese copy when Obsidian is in Chinese", () => {

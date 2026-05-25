@@ -1,5 +1,3 @@
-import { getLanguage } from "obsidian";
-
 export type SupportedLocale = "en" | "zh-CN";
 
 export interface I18nStrings {
@@ -193,6 +191,6 @@ export function resolveLocale(language: string | undefined): SupportedLocale {
 	return language.toLowerCase().startsWith("zh") ? "zh-CN" : "en";
 }
 
-export function getStrings(language = getLanguage()): I18nStrings {
+export function getStrings(language?: string): I18nStrings {
 	return resolveLocale(language) === "zh-CN" ? ZH_CN_STRINGS : EN_STRINGS;
 }

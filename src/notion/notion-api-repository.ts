@@ -202,7 +202,7 @@ export class NotionApiRepository implements NotionRepository {
 }
 
 interface NotionClientTransportOptions {
-	fetch?: typeof globalThis.fetch;
+	fetch?: typeof fetch;
 	requestUrl?: typeof obsidian.requestUrl;
 }
 
@@ -213,7 +213,9 @@ export function createNotionClientFactory(
 	return () => new Client({
 		auth: getToken().trim(),
 		fetch: createNotionFetchTransport({
-			fetch: "fetch" in transport ? transport.fetch : globalThis.fetch,
+			fetch: "fetch" in transport
+				? transport.fetch
+				: window.activeDocument.defaultView?.fetch,
 			requestUrl: "requestUrl" in transport ? transport.requestUrl : obsidian.requestUrl,
 		}),
 	}) as NotionClientLike;
@@ -232,7 +234,7 @@ function createNotionFetchTransport(
 
 	const fetchImplementation = transport.fetch;
 	return (input, init) => fetchImplementation.call(
-		globalThis,
+		window.activeDocument.defaultView,
 		input,
 		sanitizeRequestInit(init),
 	);

@@ -118,7 +118,7 @@ export async function syncDatabaseFile(
 		return summary;
 	}
 
-	if (shouldPullRemoteChanges(document, remotePage, profile, snapshot.schema)) {
+	if (shouldPullRemoteChanges(document, remotePage, profile)) {
 		await options.localRepository.upsertDocument(
 			mergeRemoteIntoLocalDocument(document, remotePage, profile),
 		);
@@ -309,7 +309,6 @@ function shouldPullRemoteChanges(
 	document: LocalDocument,
 	page: NotionPage,
 	profile: DatabaseSyncSetting,
-	schema: Record<string, string>,
 ): boolean {
 	if (compareTimestamps(page.lastEditedTime, document.lastEditedTime) <= 0) {
 		return false;

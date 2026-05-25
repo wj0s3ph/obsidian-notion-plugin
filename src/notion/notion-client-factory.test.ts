@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as obsidian from "obsidian";
 
-const { clientConstructor } = vi.hoisted(() => ({
+const { activeDocument, activeWindow, clientConstructor } = vi.hoisted(() => ({
+	activeDocument: {
+		defaultView: {},
+	},
+	activeWindow: {},
 	clientConstructor: vi.fn(function (this: unknown, options: Record<string, unknown>) {
 		return {
 			options,
@@ -9,8 +13,14 @@ const { clientConstructor } = vi.hoisted(() => ({
 	}),
 }));
 
+activeDocument.defaultView = activeWindow;
+
 vi.mock("@notionhq/client", () => ({
 	Client: clientConstructor,
+}));
+
+vi.mock("obsidian", () => ({
+	requestUrl: vi.fn(),
 }));
 
 import { createNotionClientFactory } from "./notion-api-repository";
@@ -21,9 +31,10 @@ describe("createNotionClientFactory", () => {
 		vi.unstubAllGlobals();
 	});
 
-	it("binds the global fetch implementation before passing it to the Notion client", async () => {
+	it("binds fetch to Obsidian's active document window before passing it to the Notion client", async () => {
+		vi.stubGlobal("window", { activeDocument });
 		const rawFetch = vi.fn(function (this: unknown) {
-			if (this !== globalThis) {
+			if (this !== activeWindow) {
 				throw new TypeError("Illegal invocation");
 			}
 
@@ -49,6 +60,7 @@ describe("createNotionClientFactory", () => {
 	});
 
 	it("strips browser-unsafe request options before delegating to fetch", async () => {
+		vi.stubGlobal("window", { activeDocument });
 		const rawFetch = vi.fn(() => Promise.resolve(new Response("", { status: 200 })));
 		vi.stubGlobal("fetch", rawFetch);
 
@@ -83,6 +95,7 @@ describe("createNotionClientFactory", () => {
 	});
 
 	it("uses Obsidian requestUrl to bypass browser fetch restrictions", async () => {
+		vi.stubGlobal("window", { activeDocument });
 		const requestUrlMock = vi.spyOn(obsidian, "requestUrl").mockResolvedValue({
 			arrayBuffer: new ArrayBuffer(0),
 			headers: {

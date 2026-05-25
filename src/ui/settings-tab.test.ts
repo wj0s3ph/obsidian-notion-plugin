@@ -52,11 +52,9 @@ class FakeButtonControl extends FakeControl {
 class FakeToggleControl extends FakeControl {}
 
 class FakeExtraButtonControl extends FakeControl {
-	setIcon(): this {
-		return this;
-	}
+	extraSettingsEl = document.createElement("button");
 
-	setTooltip(): this {
+	setIcon(): this {
 		return this;
 	}
 
@@ -155,13 +153,14 @@ vi.mock("obsidian", () => {
 		}
 
 		addExtraButton(callback: (control: FakeExtraButtonControl) => void): this {
-			callback(new FakeExtraButtonControl());
+			const control = new FakeExtraButtonControl();
+			this.containerEl.append(control.extraSettingsEl);
+			callback(control);
 			return this;
 		}
 	}
 
 	return {
-		getLanguage: () => "en",
 		Notice,
 		PluginSettingTab,
 		Setting,
@@ -242,6 +241,34 @@ describe("NotionSyncSettingTab", () => {
 		await refreshButton?.onClickHandler?.();
 
 		expect(fetchDatabaseProperties).toHaveBeenCalledWith("tasks");
+	});
+
+	it("adds accessible labels to destructive extra buttons without requiring newer tooltip APIs", () => {
+		const profile = {
+			...createDefaultDatabaseConfig("Tasks"),
+			propertyMappings: [{
+				direction: "bidirectional" as const,
+				notionProperty: "Published",
+				obsidianKey: "published",
+			}],
+		};
+		const tab = new NotionSyncSettingTab({} as never, {
+			fetchDatabaseProperties: vi.fn(() => Promise.resolve([])),
+			saveSettings: vi.fn(() => Promise.resolve(undefined)),
+			settings: {
+				databases: [profile],
+				notionToken: "",
+			},
+		});
+
+		tab.display();
+
+		const extraButtonLabels = Array.from(
+			tab.containerEl.querySelectorAll("[aria-label]"),
+			(element) => element.getAttribute("aria-label"),
+		);
+		expect(extraButtonLabels).toContain("Remove profile");
+		expect(extraButtonLabels).toContain("Remove mapping");
 	});
 
 	it("does not render a sync direction selector for property mappings", () => {

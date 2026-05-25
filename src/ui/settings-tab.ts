@@ -1,4 +1,4 @@
-import { Notice, PluginSettingTab, Setting } from "obsidian";
+import { Notice, PluginSettingTab, Setting, type ExtraButtonComponent } from "obsidian";
 
 import { getStrings } from "../i18n";
 import {
@@ -91,14 +91,15 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 			.setHeading();
 
 		new Setting(section)
-			.addExtraButton((button) => button
-				.setIcon("trash")
-				.setTooltip(strings.removeProfile)
-				.onClick(async () => {
-					this.plugin.settings.databases.splice(index, 1);
-					await this.plugin.saveSettings();
-					this.display();
-				}));
+			.addExtraButton((button) => {
+				button.setIcon("trash");
+				labelExtraButton(button, strings.removeProfile)
+					.onClick(async () => {
+						this.plugin.settings.databases.splice(index, 1);
+						await this.plugin.saveSettings();
+						this.display();
+					});
+			});
 
 		new Setting(section)
 			.setName(strings.profileName)
@@ -175,14 +176,15 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 				})
-				.addExtraButton((button) => button
-					.setIcon("trash")
-					.setTooltip(strings.removeMapping)
-					.onClick(async () => {
-						profile.propertyMappings.splice(mappingIndex, 1);
-						await this.plugin.saveSettings();
-						this.display();
-					}));
+				.addExtraButton((button) => {
+					button.setIcon("trash");
+					labelExtraButton(button, strings.removeMapping)
+						.onClick(async () => {
+							profile.propertyMappings.splice(mappingIndex, 1);
+							await this.plugin.saveSettings();
+							this.display();
+						});
+				});
 		});
 
 		new Setting(section)
@@ -200,4 +202,10 @@ export class NotionSyncSettingTab extends PluginSettingTab {
 					this.display();
 				}));
 	}
+}
+
+function labelExtraButton(button: ExtraButtonComponent, label: string): ExtraButtonComponent {
+	button.extraSettingsEl.setAttribute("aria-label", label);
+	button.extraSettingsEl.setAttribute("title", label);
+	return button;
 }

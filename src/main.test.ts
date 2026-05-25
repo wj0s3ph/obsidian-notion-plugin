@@ -139,11 +139,10 @@ vi.mock("obsidian", () => {
 		setPlaceholder(): void {}
 	}
 
-	return {
-		FuzzySuggestModal,
-		getLanguage: () => "en",
-		Notice,
-		Plugin,
+		return {
+			FuzzySuggestModal,
+			Notice,
+			Plugin,
 		PluginSettingTab,
 		Setting,
 	};
